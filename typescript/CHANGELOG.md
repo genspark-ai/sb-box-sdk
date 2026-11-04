@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.1
+
+- No code changes. First release published through the repository's GitHub Actions trusted publisher (npm provenance).
+
 ## 0.1.0 — 2026-11-04
 
 Initial release.
