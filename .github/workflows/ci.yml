@@ -10,7 +10,8 @@ permissions:
 
 jobs:
   python:
-    runs-on: ubuntu-latest
+    # ubuntu-latest (26.04) ships no CPython 3.9 build; 22.04 has every supported version
+    runs-on: ubuntu-22.04
     strategy:
       matrix:
         python: ["3.9", "3.12"]
