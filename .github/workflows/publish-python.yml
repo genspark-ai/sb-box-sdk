@@ -15,7 +15,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with: { python-version: "3.12" }
-      - run: pip install -e . pytest build
+      - run: pip install -e '.[dev]' build
       - run: pytest -q
       - name: Tag must match package version
         run: |
