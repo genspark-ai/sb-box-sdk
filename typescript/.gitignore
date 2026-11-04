@@ -1,0 +1,6 @@
+node_modules/
+dist/
+*.tgz
+
+# the repo root ignores any "test" path; the SDK test suite must ship
+!test/

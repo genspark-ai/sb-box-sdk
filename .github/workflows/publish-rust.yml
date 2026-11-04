@@ -1,0 +1,29 @@
+name: Publish Rust
+
+# Tag `rust-vX.Y.Z` (must equal Cargo.toml version). crates.io trusted
+# publishing: crate genspark-sbbox → owner genspark-ai, repo sb-box-sdk,
+# workflow publish-rust.yml, environment crates-io.
+on:
+  push:
+    tags: ["rust-v*"]
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: crates-io
+    permissions:
+      contents: read
+      id-token: write
+    defaults: { run: { working-directory: rust } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo test --all-features
+      - name: Tag must match crate version
+        run: |
+          v=$(cargo metadata --no-deps --format-version 1 | python3 -c "import json,sys; print(json.load(sys.stdin)['packages'][0]['version'])")
+          test "rust-v$v" = "${GITHUB_REF_NAME}" || { echo "tag ${GITHUB_REF_NAME} != rust-v$v"; exit 1; }
+      - uses: rust-lang/crates-io-auth-action@v1
+        id: auth
+      - run: cargo publish
+        env: { CARGO_REGISTRY_TOKEN: "${{ steps.auth.outputs.token }}" }

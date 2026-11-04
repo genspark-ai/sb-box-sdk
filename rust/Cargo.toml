@@ -1,0 +1,46 @@
+[package]
+name = "genspark-sbbox"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.75"
+license = "MIT"
+description = "Official Rust SDK for SB-Box — cloud sandboxes for agents and code execution"
+homepage = "https://www.genspark.ai/sb-box"
+documentation = "https://docs.rs/genspark-sbbox"
+repository = "https://github.com/genspark-ai/sb-box-sdk"
+readme = "README.md"
+keywords = ["sandbox", "genspark", "sb-box", "code-execution", "agents"]
+categories = ["api-bindings", "web-programming::http-client"]
+
+[lib]
+name = "sbbox"
+path = "src/lib.rs"
+
+[features]
+default = []
+blocking = ["tokio/rt-multi-thread"]
+ws = ["dep:tokio-tungstenite"]
+
+[dependencies]
+bytes = "1"
+futures-util = { version = "0.3", default-features = false, features = ["std"] }
+rand = "0.8"
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json", "stream"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "1"
+tokio = { version = "1", features = ["time", "rt"] }
+tokio-tungstenite = { version = "0.24", optional = true, features = ["rustls-tls-webpki-roots"] }
+url = "2"
+
+[dev-dependencies]
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+wiremock = "0.6"
+
+[package.metadata.docs.rs]
+all-features = true
+
+[[example]]
+name = "quickstart"
+[[example]]
+name = "smoke"

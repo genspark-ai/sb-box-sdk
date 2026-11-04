@@ -1,0 +1,37 @@
+name: Publish Python
+
+# Tag `python-vX.Y.Z` (must equal sbbox/_version.py). PyPI trusted publishing:
+# project genspark-sbbox → owner genspark-ai, repo sb-box-sdk, workflow
+# publish-python.yml, environment pypi. No token is stored anywhere.
+on:
+  push:
+    tags: ["python-v*"]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: python } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install -e . pytest build
+      - run: pytest -q
+      - name: Tag must match package version
+        run: |
+          v=$(python -c "import sbbox; print(sbbox.__version__)")
+          test "python-v$v" = "${GITHUB_REF_NAME}" || { echo "tag ${GITHUB_REF_NAME} != python-v$v"; exit 1; }
+      - run: python -m build
+      - uses: actions/upload-artifact@v4
+        with: { name: python-dist, path: python/dist/ }
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with: { name: python-dist, path: dist/ }
+      - uses: pypa/gh-action-pypi-publish@release/v1

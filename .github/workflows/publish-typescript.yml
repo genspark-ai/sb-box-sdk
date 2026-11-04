@@ -1,0 +1,29 @@
+name: Publish TypeScript
+
+# Tag `typescript-vX.Y.Z` (must equal package.json version). npm trusted
+# publishing: package @genspark/sb-box → owner genspark-ai, repo sb-box-sdk,
+# workflow publish-typescript.yml, environment npm. Needs npm >= 11.5 (Node 24).
+on:
+  push:
+    tags: ["typescript-v*"]
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: npm
+    permissions:
+      contents: read
+      id-token: write
+    defaults: { run: { working-directory: typescript } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: "24", registry-url: "https://registry.npmjs.org" }
+      - run: npm install -g npm@latest
+      - run: npm ci
+      - run: npm run typecheck && npm test && npm run build
+      - name: Tag must match package version
+        run: |
+          v=$(node -p "require('./package.json').version")
+          test "typescript-v$v" = "${GITHUB_REF_NAME}" || { echo "tag ${GITHUB_REF_NAME} != typescript-v$v"; exit 1; }
+      - run: npm publish --access public --provenance

@@ -1,0 +1,7 @@
+src
+test
+examples
+tsup.config.ts
+tsconfig.json
+node_modules
+*.tgz
