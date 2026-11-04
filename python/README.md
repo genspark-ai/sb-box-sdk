@@ -15,29 +15,29 @@ clients expose the same surface.
 ```python
 import sbbox
 
-client = sbbox.Client()                      # reads SBBOX_API_KEY (or GSK_API_KEY)
+client = sbbox.Client()  # reads SBBOX_API_KEY (or GSK_API_KEY)
 
-with client.sandboxes.create() as sb:        # public "base" image; killed on exit
+with client.sandboxes.create() as sb:  # public "base" image; killed on exit
     print(sb.exec("python3 --version").stdout)
 
     sb.files.write("/home/user/hello.py", "print('hi from the sandbox')")
     print(sb.exec(["python3", "/home/user/hello.py"]).stdout)
 
-    result = sb.run_code("import math; math.pi * 2")   # stateful interpreter (base image)
-    print(result.text)                                 # "6.283185307179586"
+    result = sb.run_code("import math; math.pi * 2")  # stateful interpreter (base image)
+    print(result.text)  # "6.283185307179586"
 
-    print(sb.port_url(8000))                 # public URL for a service listening on :8000
+    print(sb.port_url(8000))  # public URL for a service listening on :8000
 ```
 
 Keep a machine around between sessions:
 
 ```python
-sb = client.sandboxes.create("base", timeout=0)      # no deadline; the idle timer still applies
+sb = client.sandboxes.create("base", timeout=0)  # no deadline; the idle timer still applies
 sb.exec("git clone https://github.com/you/project /home/user/project")
-sb.freeze()                                          # memory + disk kept, no compute billed
+sb.freeze()  # memory + disk kept, no compute billed
 ...
-sb = client.sandboxes.get("sbx-…")                   # later, anywhere
-sb.resume()                                          # ~1 s, processes still there
+sb = client.sandboxes.get("sbx-…")  # later, anywhere
+sb.resume()  # ~1 s, processes still there
 sb.exec("cd /home/user/project && make test")
 sb.kill()
 ```

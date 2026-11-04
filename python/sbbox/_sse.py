@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import json
+from collections.abc import AsyncIterator, Iterable, Iterator
 from dataclasses import dataclass, field
-from typing import Any, AsyncIterator, Iterable, Iterator, Optional, List
+from typing import Any, List, Optional
 
 
 @dataclass
@@ -51,8 +52,7 @@ class _Parser:
         if line.startswith(":"):
             return None
         name, _, value = line.partition(":")
-        if value.startswith(" "):
-            value = value[1:]
+        value = value.removeprefix(" ")
         self._has = True
         if name == "event":
             self._cur.event = value

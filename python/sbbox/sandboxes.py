@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import asyncio
 import time
-from typing import Any, AsyncIterator, Dict, Iterator, List, Mapping, Optional, Sequence, Union
+from collections.abc import AsyncIterator, Iterator, Mapping, Sequence
+from typing import Any, Dict, List, Optional, Union
 
 from ._client import NO_DEADLINE, _AsyncHTTP, _SyncHTTP, check_metadata, compact, normalize_command
 from ._sse import SSEEvent
@@ -349,7 +350,7 @@ class Sandbox(SandboxInfo):
     pty: Ptys
 
     @classmethod
-    def _bind(cls, http: _SyncHTTP, d: Dict[str, Any]) -> "Sandbox":
+    def _bind(cls, http: _SyncHTTP, d: Dict[str, Any]) -> Sandbox:
         info = SandboxInfo.from_dict(d)
         sb = cls(**info.__dict__)
         sb._http = http
@@ -358,19 +359,19 @@ class Sandbox(SandboxInfo):
         sb.pty = Ptys(http, sb.id)
         return sb
 
-    def _update(self, d: Dict[str, Any]) -> "Sandbox":
+    def _update(self, d: Dict[str, Any]) -> Sandbox:
         self.__dict__.update({k: v for k, v in SandboxInfo.from_dict(d).__dict__.items() if k != "id" or v})
         return self
 
     # lifecycle
-    def refresh(self) -> "Sandbox":
+    def refresh(self) -> Sandbox:
         return self._update(self._http.json("GET", f"/sandboxes/{self.id}", retry=True))
 
     def kill(self) -> None:
         self._http.json("DELETE", f"/sandboxes/{self.id}", retry=True)
         self.state = "killed"
 
-    def freeze(self, *, wait: bool = True, timeout: float = 90, interval: float = 2) -> "Sandbox":
+    def freeze(self, *, wait: bool = True, timeout: float = 90, interval: float = 2) -> Sandbox:
         res = self._http.json("POST", f"/sandboxes/{self.id}/freeze", retry=True, timeout=120) or {}
         if res.get("state") == "frozen" and "id" in res:
             return self._update(res)
@@ -392,19 +393,19 @@ class Sandbox(SandboxInfo):
                 raise WaitTimeout(f"sandbox {self.id} still {self.state} after {timeout:g}s")
             time.sleep(interval)
 
-    def resume(self, *, timeout: Optional[int] = None) -> "Sandbox":
+    def resume(self, *, timeout: Optional[int] = None) -> Sandbox:
         body = compact({"timeout": int(timeout) if timeout is not None else None})
         return self._update(
             self._http.json("POST", f"/sandboxes/{self.id}/resume", body=body, retry=True, timeout=120)
         )
 
-    def rollback(self, *, version: int = 0, timeout: Optional[int] = None) -> "Sandbox":
+    def rollback(self, *, version: int = 0, timeout: Optional[int] = None) -> Sandbox:
         body = compact({"version": int(version), "timeout": int(timeout) if timeout is not None else None})
         return self._update(self._http.json("POST", f"/sandboxes/{self.id}/rollback", body=body, timeout=120))
 
     def clone(
         self, *, version: int = 0, metadata: Optional[Mapping[str, Any]] = None, timeout: float = 120
-    ) -> "Sandbox":
+    ) -> Sandbox:
         body = compact({"version": int(version), "metadata": check_metadata(metadata)})
         res = self._http.json(
             "POST",
@@ -418,7 +419,7 @@ class Sandbox(SandboxInfo):
     def set_timeout(self, seconds: int) -> None:
         self._http.json("POST", f"/sandboxes/{self.id}/timeout", body={"timeout": int(seconds)}, retry=True)
 
-    def reset(self, *, timeout: float = 120) -> "Sandbox":
+    def reset(self, *, timeout: float = 120) -> Sandbox:
         return self._update(
             self._http.json(
                 "POST",
@@ -501,10 +502,10 @@ class Sandbox(SandboxInfo):
     def revoke(self, user_id: str) -> None:
         self._http.json("DELETE", f"/sandboxes/{self.id}/grants/{user_id}")
 
-    def __enter__(self) -> "Sandbox":
+    def __enter__(self) -> Sandbox:
         return self
 
-    def __exit__(self, *exc: Any) -> None:
+    def __exit__(self, *exc: object) -> None:
         self.kill()
 
 
@@ -770,7 +771,7 @@ class AsyncSandbox(SandboxInfo):
     pty: AsyncPtys
 
     @classmethod
-    def _bind(cls, http: _AsyncHTTP, d: Dict[str, Any]) -> "AsyncSandbox":
+    def _bind(cls, http: _AsyncHTTP, d: Dict[str, Any]) -> AsyncSandbox:
         info = SandboxInfo.from_dict(d)
         sb = cls(**info.__dict__)
         sb._http = http
@@ -779,18 +780,18 @@ class AsyncSandbox(SandboxInfo):
         sb.pty = AsyncPtys(http, sb.id)
         return sb
 
-    def _update(self, d: Dict[str, Any]) -> "AsyncSandbox":
+    def _update(self, d: Dict[str, Any]) -> AsyncSandbox:
         self.__dict__.update({k: v for k, v in SandboxInfo.from_dict(d).__dict__.items() if k != "id" or v})
         return self
 
-    async def refresh(self) -> "AsyncSandbox":
+    async def refresh(self) -> AsyncSandbox:
         return self._update(await self._http.json("GET", f"/sandboxes/{self.id}", retry=True))
 
     async def kill(self) -> None:
         await self._http.json("DELETE", f"/sandboxes/{self.id}", retry=True)
         self.state = "killed"
 
-    async def freeze(self, *, wait: bool = True, timeout: float = 90, interval: float = 2) -> "AsyncSandbox":
+    async def freeze(self, *, wait: bool = True, timeout: float = 90, interval: float = 2) -> AsyncSandbox:
         res = await self._http.json("POST", f"/sandboxes/{self.id}/freeze", retry=True, timeout=120) or {}
         if res.get("state") == "frozen" and "id" in res:
             return self._update(res)
@@ -812,13 +813,13 @@ class AsyncSandbox(SandboxInfo):
                 raise WaitTimeout(f"sandbox {self.id} still {self.state} after {timeout:g}s")
             await asyncio.sleep(interval)
 
-    async def resume(self, *, timeout: Optional[int] = None) -> "AsyncSandbox":
+    async def resume(self, *, timeout: Optional[int] = None) -> AsyncSandbox:
         body = compact({"timeout": int(timeout) if timeout is not None else None})
         return self._update(
             await self._http.json("POST", f"/sandboxes/{self.id}/resume", body=body, retry=True, timeout=120)
         )
 
-    async def rollback(self, *, version: int = 0, timeout: Optional[int] = None) -> "AsyncSandbox":
+    async def rollback(self, *, version: int = 0, timeout: Optional[int] = None) -> AsyncSandbox:
         body = compact({"version": int(version), "timeout": int(timeout) if timeout is not None else None})
         return self._update(
             await self._http.json("POST", f"/sandboxes/{self.id}/rollback", body=body, timeout=120)
@@ -826,7 +827,7 @@ class AsyncSandbox(SandboxInfo):
 
     async def clone(
         self, *, version: int = 0, metadata: Optional[Mapping[str, Any]] = None, timeout: float = 120
-    ) -> "AsyncSandbox":
+    ) -> AsyncSandbox:
         body = compact({"version": int(version), "metadata": check_metadata(metadata)})
         res = await self._http.json(
             "POST",
@@ -842,7 +843,7 @@ class AsyncSandbox(SandboxInfo):
             "POST", f"/sandboxes/{self.id}/timeout", body={"timeout": int(seconds)}, retry=True
         )
 
-    async def reset(self, *, timeout: float = 120) -> "AsyncSandbox":
+    async def reset(self, *, timeout: float = 120) -> AsyncSandbox:
         return self._update(
             await self._http.json(
                 "POST",
@@ -923,10 +924,10 @@ class AsyncSandbox(SandboxInfo):
     async def revoke(self, user_id: str) -> None:
         await self._http.json("DELETE", f"/sandboxes/{self.id}/grants/{user_id}")
 
-    async def __aenter__(self) -> "AsyncSandbox":
+    async def __aenter__(self) -> AsyncSandbox:
         return self
 
-    async def __aexit__(self, *exc: Any) -> None:
+    async def __aexit__(self, *exc: object) -> None:
         await self.kill()
 
 

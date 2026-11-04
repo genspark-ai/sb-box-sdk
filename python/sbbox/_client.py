@@ -7,7 +7,8 @@ import json
 import os
 import random
 import time
-from typing import Any, AsyncIterator, Dict, Iterator, List, Mapping, Optional, Sequence, Union
+from collections.abc import AsyncIterator, Iterator, Mapping, Sequence
+from typing import Any, Dict, List, Optional, Union
 
 import httpx
 

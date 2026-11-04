@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import asyncio
 import time
-from typing import Any, Dict, List, Optional, Sequence
+from collections.abc import Sequence
+from typing import Any, Dict, List, Optional
 
 from ._client import _AsyncHTTP, _SyncHTTP, compact
 from .errors import TemplateBuildError, WaitTimeout

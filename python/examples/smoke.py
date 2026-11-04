@@ -13,7 +13,6 @@ from typing import Callable, TypeVar
 import sbbox
 from sbbox.errors import redact
 
-
 T = TypeVar("T")
 
 

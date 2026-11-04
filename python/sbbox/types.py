@@ -20,7 +20,7 @@ class Regions:
     raw: Dict[str, Any] = field(repr=False, default_factory=dict)
 
     @classmethod
-    def from_dict(cls, d: Dict[str, Any]) -> "Regions":
+    def from_dict(cls, d: Dict[str, Any]) -> Regions:
         return cls(regions=list(d.get("regions") or []), default=d.get("default"), raw=d)
 
 
@@ -33,7 +33,7 @@ class Limits:
     raw: Dict[str, Any] = field(repr=False, default_factory=dict)
 
     @classmethod
-    def from_dict(cls, d: Dict[str, Any]) -> "Limits":
+    def from_dict(cls, d: Dict[str, Any]) -> Limits:
         return cls(
             plan=d.get("plan"),
             plan_required=d.get("planRequired"),
@@ -58,7 +58,7 @@ class Usage:
         return float(self.direct.get("credits") or 0)
 
     @classmethod
-    def from_dict(cls, d: Dict[str, Any]) -> "Usage":
+    def from_dict(cls, d: Dict[str, Any]) -> Usage:
         return cls(
             days=int(d.get("days") or 0),
             from_=d.get("from"),
@@ -92,7 +92,7 @@ class Template:
     raw: Dict[str, Any] = field(repr=False, default_factory=dict)
 
     @classmethod
-    def from_dict(cls, d: Dict[str, Any]) -> "Template":
+    def from_dict(cls, d: Dict[str, Any]) -> Template:
         return cls(
             id=_get(d, "id", "templateId", "template_id", default=""),
             name=d.get("name"),
@@ -124,7 +124,7 @@ class TemplateBuild:
     raw: Dict[str, Any] = field(repr=False, default_factory=dict)
 
     @classmethod
-    def from_dict(cls, d: Dict[str, Any]) -> "TemplateBuild":
+    def from_dict(cls, d: Dict[str, Any]) -> TemplateBuild:
         return cls(
             template_id=_get(d, "templateId", "template_id", "id", default=""),
             status=d.get("status") or "building",
@@ -143,7 +143,7 @@ class Grant:
     raw: Dict[str, Any] = field(repr=False, default_factory=dict)
 
     @classmethod
-    def from_dict(cls, d: Dict[str, Any]) -> "Grant":
+    def from_dict(cls, d: Dict[str, Any]) -> Grant:
         return cls(
             grantee_id=_get(d, "grantee_id", "granteeId", default=""),
             permission=_get(d, "permission", "perm", default="read"),
@@ -160,7 +160,7 @@ class SandboxVersion:
     label: Optional[str]
 
     @classmethod
-    def from_dict(cls, d: Dict[str, Any]) -> "SandboxVersion":
+    def from_dict(cls, d: Dict[str, Any]) -> SandboxVersion:
         return cls(
             version=int(d.get("version", 0)), frozen_at=_get(d, "frozenAt", "frozen_at"), label=d.get("label")
         )
@@ -198,7 +198,7 @@ class SandboxInfo:
         return self.port_url_template.replace("{port}", str(int(port)))
 
     @classmethod
-    def from_dict(cls, d: Dict[str, Any]) -> "SandboxInfo":
+    def from_dict(cls, d: Dict[str, Any]) -> SandboxInfo:
         return cls(
             id=_get(d, "id", "sandboxId", "sandbox_id", default=""),
             template_id=_get(d, "templateId", "template_id"),
@@ -243,7 +243,7 @@ class SandboxSummary:
         return self.port_url_template.replace("{port}", str(int(port)))
 
     @classmethod
-    def from_dict(cls, d: Dict[str, Any]) -> "SandboxSummary":
+    def from_dict(cls, d: Dict[str, Any]) -> SandboxSummary:
         return cls(
             id=_get(d, "id", "sandbox_id", default=""),
             template_id=_get(d, "template_id", "templateId"),
@@ -269,7 +269,7 @@ class CommandResult:
         return self.exit_code == 0
 
     @classmethod
-    def from_dict(cls, d: Dict[str, Any]) -> "CommandResult":
+    def from_dict(cls, d: Dict[str, Any]) -> CommandResult:
         return cls(
             stdout=d.get("stdout") or "",
             stderr=d.get("stderr") or "",
@@ -291,7 +291,7 @@ class ExecEvent:
     seq: Optional[str] = None
 
     @classmethod
-    def from_sse(cls, event: str, payload: Any, seq: Optional[str]) -> "ExecEvent":
+    def from_sse(cls, event: str, payload: Any, seq: Optional[str]) -> ExecEvent:
         p = payload if isinstance(payload, dict) else {}
         if event == "execId":
             return cls(kind="execId", exec_id=p.get("execId"), seq=seq)
@@ -312,7 +312,7 @@ class CodeError:
     traceback: Any
 
     @classmethod
-    def from_dict(cls, d: Dict[str, Any]) -> "CodeError":
+    def from_dict(cls, d: Dict[str, Any]) -> CodeError:
         return cls(name=d.get("name") or "", value=d.get("value") or "", traceback=d.get("traceback"))
 
 
@@ -337,7 +337,7 @@ class CodeResultItem:
     raw: Dict[str, Any] = field(repr=False, default_factory=dict)
 
     @classmethod
-    def from_dict(cls, d: Dict[str, Any]) -> "CodeResultItem":
+    def from_dict(cls, d: Dict[str, Any]) -> CodeResultItem:
         return cls(
             text=d.get("text"),
             html=d.get("html"),
@@ -376,7 +376,7 @@ class CodeResult:
         return self.results[-1].text if self.results else None
 
     @classmethod
-    def from_dict(cls, d: Dict[str, Any]) -> "CodeResult":
+    def from_dict(cls, d: Dict[str, Any]) -> CodeResult:
         err = d.get("error")
         return cls(
             stdout=d.get("stdout") or "",
@@ -398,7 +398,7 @@ class FileEntry:
     raw: Dict[str, Any] = field(repr=False, default_factory=dict)
 
     @classmethod
-    def from_dict(cls, d: Dict[str, Any]) -> "FileEntry":
+    def from_dict(cls, d: Dict[str, Any]) -> FileEntry:
         return cls(
             name=d.get("name") or "",
             path=d.get("path") or "",
@@ -416,7 +416,7 @@ class ProcessInfo:
     raw: Dict[str, Any] = field(repr=False, default_factory=dict)
 
     @classmethod
-    def from_dict(cls, d: Dict[str, Any]) -> "ProcessInfo":
+    def from_dict(cls, d: Dict[str, Any]) -> ProcessInfo:
         return cls(
             exec_id=_get(d, "execId", "exec_id", default=""),
             pid=int(d.get("pid") or 0),
@@ -449,7 +449,7 @@ class MetricPoint:
     raw: Dict[str, Any] = field(repr=False, default_factory=dict)
 
     @classmethod
-    def from_dict(cls, d: Dict[str, Any]) -> "MetricPoint":
+    def from_dict(cls, d: Dict[str, Any]) -> MetricPoint:
         return cls(
             timestamp=d.get("timestamp"),
             timestamp_unix=d.get("timestampUnix"),

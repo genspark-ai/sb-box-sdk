@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Optional
 
 import httpx
 
@@ -52,10 +52,10 @@ class Client:
     def close(self) -> None:
         self._http.close()
 
-    def __enter__(self) -> "Client":
+    def __enter__(self) -> Client:
         return self
 
-    def __exit__(self, *exc: Any) -> None:
+    def __exit__(self, *exc: object) -> None:
         self.close()
 
     def __repr__(self) -> str:
@@ -100,10 +100,10 @@ class AsyncClient:
     async def aclose(self) -> None:
         await self._http.aclose()
 
-    async def __aenter__(self) -> "AsyncClient":
+    async def __aenter__(self) -> AsyncClient:
         return self
 
-    async def __aexit__(self, *exc: Any) -> None:
+    async def __aexit__(self, *exc: object) -> None:
         await self.aclose()
 
     def __repr__(self) -> str:
