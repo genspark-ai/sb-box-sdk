@@ -26,4 +26,10 @@ jobs:
         run: |
           v=$(node -p "require('./package.json').version")
           test "typescript-v$v" = "${GITHUB_REF_NAME}" || { echo "tag ${GITHUB_REF_NAME} != typescript-v$v"; exit 1; }
-      - run: npm publish --access public --provenance
+      - name: Publish (skipped when this version already exists)
+        run: |
+          v=$(node -p "require('./package.json').version")
+          if npm view "@genspark/sb-box@$v" version >/dev/null 2>&1; then
+            echo "@genspark/sb-box@$v is already published; nothing to do"; exit 0
+          fi
+          npm publish --access public --provenance
