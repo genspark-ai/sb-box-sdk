@@ -229,7 +229,13 @@ describe('commands', () => {
     expect(await bg.input('abc')).toBe(3)
     const out = []
     for await (const e of bg.connect()) out.push(e)
-    expect(out).toEqual([{ kind: 'stdout', data: 'bg\n', execId: 'bg-1' }, { kind: 'exit', exitCode: 0, execId: 'bg-1' }])
+    expect(out).toEqual([
+      { kind: 'stdout', data: 'bg\n', seq: 1 }, { kind: 'stderr', data: 'warn', seq: 2 },
+      { kind: 'gap', data: 'output gap — ring evicted unread bytes' }, { kind: 'done', data: 'disconnected' },
+    ])
+    expect(mock.state.connectFromSeq).toBeNull()
+    for await (const _e of bg.connect({ fromSeq: 2 })) { /* drain */ }
+    expect(mock.state.connectFromSeq).toBe('2')
     await bg.close()
     expect(await bg.wait()).toBe(7)
     await bg.kill()

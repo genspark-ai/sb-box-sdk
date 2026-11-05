@@ -24,6 +24,8 @@ export interface MockState {
   buildOutcome: 'ready' | 'error'
   files: Map<string, Buffer>
   killed: Set<string>
+  /** `from_seq` query of the last background-command connect (null = none). */
+  connectFromSeq: string | null
 }
 
 function sandboxRecord(id: string, state = 'running') {
@@ -53,7 +55,7 @@ function sse(res: http.ServerResponse, events: Array<[string, unknown, string?]>
 
 export async function startMock(): Promise<{ url: string; state: MockState; close: () => Promise<void> }> {
   const state: MockState = {
-    requests: [], freezeMode: '200', freezePolls: 0, cloneRetries: 0, flakyGets: 0, hangs: [],
+    requests: [], freezeMode: '200', freezePolls: 0, cloneRetries: 0, flakyGets: 0, hangs: [], connectFromSeq: null,
     buildPolls: 2, buildOutcome: 'ready', files: new Map(), killed: new Set(),
   }
   const server = http.createServer((req, res) => {
@@ -203,7 +205,10 @@ function route(req: Recorded, res: http.ServerResponse, st: MockState) {
   if (rest === '/commands/bg-1/input') return send(res, 200, { written: (j.data as string).length })
   if (rest === '/commands/bg-1/close') return send(res, 200, { status: 'ok' })
   if (rest === '/commands/bg-1/wait') return send(res, 200, { exitCode: 7 })
-  if (rest === '/commands/bg-1/connect') return sse(res, [['execId', { execId: 'bg-1' }], ['stdout', { data: 'bg\n' }], ['exit', { exitCode: 0 }]])
+  if (rest === '/commands/bg-1/connect') {
+    st.connectFromSeq = req.query.get('from_seq')
+    return sse(res, [['stdout', { data: 'bg\n' }, '1'], ['stderr', { data: 'warn' }, '2'], ['gap', { error: 'output gap — ring evicted unread bytes' }], ['done', { status: 'disconnected' }]])
+  }
   if (rest === '/commands/bg-gone/connect') return send(res, 404, { detail: 'command not found' })
   if (rest === '/commands/kill') return send(res, 200, { status: 'ok' })
   if (rest === '/commands/send-stdin') return send(res, 200, { status: 'ok' })
