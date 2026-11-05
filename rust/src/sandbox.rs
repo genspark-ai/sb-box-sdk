@@ -383,7 +383,10 @@ impl BackgroundCommand {
             None => Err(Error::Config("background command has no pid".into())),
         }
     }
-    /// Attach to the output stream.
+    /// Experimental: attach to the command's output stream (SSE).
+    ///
+    /// Not part of the documented SB-Box contract (the user guide states background-command
+    /// output is not streamed); the endpoint may change or disappear without notice.
     pub async fn connect(&self) -> Result<EventStream> {
         self.sb
             .sse_get(&format!("commands/{}/connect", self.info.exec_id))

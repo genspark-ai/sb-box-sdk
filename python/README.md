@@ -5,6 +5,8 @@ code in it, read and write files, freeze it when idle and resume it later with m
 
 ```bash
 pip install genspark-sbbox
+# until the first PyPI release:
+pip install "git+https://github.com/genspark-ai/sb-box-sdk.git#subdirectory=python"
 ```
 
 Python 3.9+. The only dependency is `httpx`. Sync (`sbbox.Client`) and async (`sbbox.AsyncClient`)
@@ -95,7 +97,7 @@ Every error derives from `sbbox.SbBoxError` and carries `status`, `code`, `messa
 | `NotFoundError` (404) | unknown or killed sandbox / template; `RegionRetiredError` subclass |
 | `CommandTimeoutError` (408) | `exec` exceeded its timeout (`.killed`) |
 | `MemoryExpiredError` (428) | the frozen memory image expired — call `sb.reset()` |
-| `DiskLostError` (410) | the disk is gone — `sb.rollback()` to the last save point |
+| `DiskLostError` (410) | the disk is gone — create a new sandbox (rollback and reset are refused too) |
 | `InterpreterUnavailableError` / `InterpreterStartFailedError` | `run_code` on an image without the interpreter |
 | `ValidationError` (400/422), `ConflictError` (409), `ServerError` (5xx), `TransportError` | the usual |
 | `TemplateBuildError`, `WaitTimeout` | raised by the client-side waits |

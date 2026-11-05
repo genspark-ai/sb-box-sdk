@@ -34,16 +34,20 @@ const last = () => mock.state.requests.at(-1)!
 
 describe('client construction', () => {
   it('requires a key and names the env vars', () => {
-    const saved = { a: process.env.SBBOX_API_KEY, b: process.env.GSK_API_KEY }
-    delete process.env.SBBOX_API_KEY
-    delete process.env.GSK_API_KEY
+    const vars = ['SBBOX_API_KEY', 'GSK_API_KEY', 'SBBOX_BASE_URL'] as const
+    const saved = Object.fromEntries(vars.map((v) => [v, process.env[v]]))
+    for (const v of vars) delete process.env[v]
     try {
       expect(() => new SbBox()).toThrow(/SBBOX_API_KEY.*GSK_API_KEY/)
       process.env.GSK_API_KEY = KEY
       expect(new SbBox().baseUrl).toBe('https://www.genspark.ai/api/sb-box/v1')
+      process.env.SBBOX_BASE_URL = 'https://example.test/api/sb-box/v1/'
+      expect(new SbBox().baseUrl).toBe('https://example.test/api/sb-box/v1')
     } finally {
-      if (saved.a) process.env.SBBOX_API_KEY = saved.a
-      if (saved.b) process.env.GSK_API_KEY = saved.b; else delete process.env.GSK_API_KEY
+      for (const v of vars) {
+        if (saved[v] === undefined) delete process.env[v]
+        else process.env[v] = saved[v]
+      }
     }
   })
 

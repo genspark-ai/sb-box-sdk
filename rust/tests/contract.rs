@@ -39,10 +39,46 @@ fn sse(body: &str) -> ResponseTemplate {
         .set_body_raw(body.as_bytes().to_vec(), "text/event-stream")
 }
 
+/// Clears the SDK's environment variables for one test and restores the developer's
+/// values afterwards, so the suite does not depend on (or disturb) the shell it runs in.
+/// Tests touching the environment serialise on the mutex because `std::env` is process-wide.
+struct EnvGuard {
+    saved: Vec<(&'static str, Option<String>)>,
+    _lock: std::sync::MutexGuard<'static, ()>,
+}
+
+impl EnvGuard {
+    const VARS: [&'static str; 3] = ["SBBOX_API_KEY", "GSK_API_KEY", "SBBOX_BASE_URL"];
+
+    fn clear() -> Self {
+        static LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+        let lock = LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        let saved = Self::VARS
+            .iter()
+            .map(|v| {
+                let old = std::env::var(v).ok();
+                std::env::remove_var(v);
+                (*v, old)
+            })
+            .collect();
+        Self { saved, _lock: lock }
+    }
+}
+
+impl Drop for EnvGuard {
+    fn drop(&mut self) {
+        for (var, old) in self.saved.drain(..) {
+            match old {
+                Some(value) => std::env::set_var(var, value),
+                None => std::env::remove_var(var),
+            }
+        }
+    }
+}
+
 #[test]
 fn key_resolution_and_config() {
-    std::env::remove_var("SBBOX_API_KEY");
-    std::env::remove_var("GSK_API_KEY");
+    let _env = EnvGuard::clear();
     let e = Client::builder().build().unwrap_err();
     assert!(matches!(e, Error::Config(_)));
     assert!(e.to_string().contains("SBBOX_API_KEY") && e.to_string().contains("GSK_API_KEY"));
@@ -50,6 +86,10 @@ fn key_resolution_and_config() {
     std::env::set_var("GSK_API_KEY", "gsk-env");
     let c = Client::builder().build().unwrap();
     assert_eq!(c.base_url(), "https://www.genspark.ai/api/sb-box/v1");
+    std::env::set_var("SBBOX_BASE_URL", "https://example.test/api/sb-box/v1/");
+    let c = Client::builder().build().unwrap();
+    assert_eq!(c.base_url(), "https://example.test/api/sb-box/v1");
+    std::env::remove_var("SBBOX_BASE_URL");
     std::env::remove_var("GSK_API_KEY");
 
     let e = Client::builder()

@@ -86,7 +86,11 @@ export class BackgroundCommand {
     })
   }
 
-  /** Stream the command's output. Resolves to an empty stream if the server already reaped it. */
+  /**
+   * Experimental: stream the command's output over SSE. Not part of the documented SB-Box
+   * contract (the user guide states background-command output is not streamed); may change or
+   * disappear without notice. Resolves to an empty stream if the server already reaped it.
+   */
   async *connect(): AsyncGenerator<ExecEvent> {
     let res: Response
     try {

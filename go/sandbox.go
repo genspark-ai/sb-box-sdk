@@ -265,8 +265,12 @@ func (b *BackgroundCommand) Kill(ctx context.Context, signal int) error {
 	return b.sb.Commands.Kill(ctx, b.PID, signal)
 }
 
-// Connect streams the command's output. A NotFoundError means the command
+// Connect streams the command's output (SSE). A NotFoundError means the command
 // was already reaped.
+//
+// Experimental: not part of the documented SB-Box contract (the user guide states
+// background-command output is not streamed); the endpoint may change or disappear
+// without notice.
 func (b *BackgroundCommand) Connect(ctx context.Context) (*ExecStream, error) {
 	resp, err := b.sb.c.do(ctx, &requestSpec{method: http.MethodGet, path: b.path("/connect"), timeout: -1, accept: "text/event-stream"})
 	if err != nil {

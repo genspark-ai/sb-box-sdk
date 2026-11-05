@@ -1,6 +1,6 @@
-# SB-Box SDKs — one design, three languages
+# SB-Box SDKs — one design, four languages
 
-Packages (all `0.1.0`, MIT, publishable on their own):
+Packages (MIT, each versioned and published on its own — see the per-package CHANGELOG for the current version):
 
 | Language | Package | Import | Runtime |
 |---|---|---|---|

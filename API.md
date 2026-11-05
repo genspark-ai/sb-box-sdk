@@ -38,7 +38,7 @@ Status → SDK error class (every class exposes `status`, `code`, `message`, `de
 | 404 | `NotFoundError` (`code=sb_box_region_retired` → `RegionRetiredError` subclass) |
 | 408 | `CommandTimeoutError` (exec: `stage=timeout`, `killed`) |
 | 409 | `LimitError` when `code` ends with `_limit` (`plan`, `limit`, `current`/`requested`); `InterpreterUnavailableError` when `code=sb_box_interpreter_unavailable`; else `ConflictError` |
-| 410 | `DiskLostError` |
+| 410 | `DiskLostError` — the disk is gone; create a new sandbox (rollback and reset are refused with 410 too) |
 | 422 | `ValidationError` (collect `errors[]`) |
 | 428 | `MemoryExpiredError` (`recovery`) |
 | 499 | `ClientDisconnectedError` |
@@ -65,7 +65,7 @@ Retry policy (built in, configurable, default on): idempotent reads (GET) and `f
 
 Record: `id, name, description, namespace ("public"|"private"), base_image, status ("building"|"ready"|"error"),
 buildError?, region, is_owner, can_create, cogen_id?, created_at, updated_at` (plus `cpuCount, memoryMB,
-diskSizeGB, startCmd, readyCmd` on GET).
+diskSizeGB` on GET, plus the undocumented `startCmd, readyCmd` — see "Beyond the documented contract").
 
 | Method / path | Body / query | Response |
 |---|---|---|
@@ -115,7 +115,7 @@ States: `starting, running, freezing, frozen, exited, failed, unknown` (list onl
 | `POST /sandboxes/{id}/commands/{execId}/input` | `{data}` | `{"written"}` |
 | `POST /sandboxes/{id}/commands/{execId}/close` | — | `{"status":"ok"}` |
 | `POST /sandboxes/{id}/commands/{execId}/wait` | — | `{"exitCode"}` (blocks) |
-| `GET /sandboxes/{id}/commands/{execId}/connect` | — | SSE stream of the background command's output (same events as sse/exec; may be unavailable — treat 404 as "already reaped") |
+| `GET /sandboxes/{id}/commands/{execId}/connect` | — | **Experimental, undocumented** (see "Beyond the documented contract"): SSE stream of the background command's output (same events as sse/exec; treat 404 as "already reaped") |
 | `POST /sandboxes/{id}/commands/kill` | `{pid, signal=9}` | `{"status":"ok"}` |
 | `POST /sandboxes/{id}/commands/send-stdin` | `{pid, data}` | `{"status":"ok"}` |
 
@@ -133,10 +133,21 @@ States: `starting, running, freezing, frozen, exited, failed, unknown` (list onl
 |---|---|---|
 | `POST /sandboxes/{id}/pty` | `{command=["/bin/bash"], rows=24, cols=80, cwd?, envVars?}` | `{"execId","pid"}` |
 | `POST /sandboxes/{id}/pty/{execId}/input` | raw bytes | `{"status":"ok"}` |
-| `GET /sandboxes/{id}/pty/{execId}/connect` | — | SSE: `event: data` `{"data"}` … `event: exit` `{"reason":"eof","exitCode"}` |
+| `GET /sandboxes/{id}/pty/{execId}/connect` | — | SSE: `event: data` `{"data"}` … `event: exit` `{"exitCode"}` (a `reason` field such as `"eof"` may be present but is undocumented) |
 | `POST /sandboxes/{id}/pty/{execId}/resize` | `{rows, cols}` | `{"status":"ok"}` |
 | `POST /sandboxes/{id}/pty/{execId}/kill` | — | `{"status":"ok"}` |
 | `GET /sandboxes/{id}/ws/pty` (WebSocket) | first frame `{command?,cwd?,rows?,cols?,envVars?}` within 10 s; then `{"type":"stdin","data"}`, `{"type":"resize","rows","cols"}`, `{"type":"kill"}` | server frames `{"type":"stdout","data","seq"}`, `{"type":"exit","exitCode"}`, `{"type":"error","error"}`; auth `?api_key=` or `X-Api-Key` |
+
+## Beyond the documented contract
+
+The service currently serves three things the public user guide does not document. The SDKs
+implement them, but they are **not part of the contract and may change or disappear without
+notice** — surface them as *experimental*:
+
+1. `GET /sandboxes/{id}/commands/{execId}/connect` — SSE output of a background command (the
+   guide, §8.3, states that background-command output is not streamed back).
+2. `startCmd` / `readyCmd` on `GET /templates/{id}`.
+3. The PTY `exit` event's `reason` field (`"eof"`).
 
 ## Things the SDKs must get right
 

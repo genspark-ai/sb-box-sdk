@@ -210,6 +210,11 @@ class BackgroundCommand:
         )
 
     def connect(self) -> Iterator[ExecEvent]:
+        """Experimental: stream the command's output over SSE.
+
+        Not part of the documented SB-Box contract (the user guide states background-command
+        output is not streamed); the endpoint may change or disappear without notice.
+        """
         for ev in self._http.sse("GET", self._p("connect"), timeout=NO_DEADLINE):
             yield _exec_event(ev)
 
@@ -628,6 +633,11 @@ class AsyncBackgroundCommand:
         )
 
     async def connect(self) -> AsyncIterator[ExecEvent]:
+        """Experimental: stream the command's output over SSE.
+
+        Not part of the documented SB-Box contract (the user guide states background-command
+        output is not streamed); the endpoint may change or disappear without notice.
+        """
         async for ev in self._http.sse("GET", self._p("connect"), timeout=NO_DEADLINE):
             yield _exec_event(ev)
 
