@@ -95,7 +95,7 @@ States: `starting, running, freezing, frozen, exited, failed, unknown` (list onl
 | `GET /sandboxes/{id}` | — | record |
 | `DELETE /sandboxes/{id}` | — | `{"status":"killed"}` |
 | `POST /sandboxes/{id}/freeze` | — | 200 record (frozen) · 200 `{"state":"frozen","status":"already frozen"}` · **202** `{"state":"freezing",…}` → poll GET until `frozen` (SDK `freeze(wait=True)` polls, default 90 s) |
-| `POST /sandboxes/{id}/resume` | `{timeout?}` | record (running); idempotent. 410 `disk_lost` = never frozen and the disk is gone → `recovery: [\"reset\",\"recreate\"]` |
+| `POST /sandboxes/{id}/resume` | `{timeout?}` | record (running); idempotent. 410 `disk_lost` = never frozen and the disk is gone → `recovery: ["reset","recreate"]` |
 | `POST /sandboxes/{id}/rollback` | `{version=0, timeout?}` | record; `version 0` = newest save point. 410 `disk_lost` here = never frozen and the disk is gone → create a new sandbox |
 | `POST /sandboxes/{id}/clone` | `{version=0, metadata?}` | new record (owner = caller); 503 + Retry-After while starting |
 | `POST /sandboxes/{id}/timeout` | `{timeout}` (0 clears) | `{"status":"ok"}` |
