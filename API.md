@@ -115,7 +115,7 @@ States: `starting, running, freezing, frozen, exited, failed, unknown` (list onl
 | `POST /sandboxes/{id}/commands/{execId}/input` | `{data}` | `{"written"}` |
 | `POST /sandboxes/{id}/commands/{execId}/close` | — | `{"status":"ok"}` |
 | `POST /sandboxes/{id}/commands/{execId}/wait` | — | `{"exitCode"}` (blocks) |
-| `GET /sandboxes/{id}/commands/{execId}/connect` | header `Last-Event-ID` or `?from_seq=` to reattach | SSE: `stdout`/`stderr` `{"data"}` with `id:` = sequence, `event: gap` `{"error"}` (output lost between seqs), `event: error`, terminal `event: done` `{"status":"disconnected"}`; 404 once the command is reaped. Detaching never kills the process (guide §8.3 / §15.4) |
+| `GET /sandboxes/{id}/commands/{execId}/connect` | header `Last-Event-ID` or `?from_seq=` to reattach | SSE: `stdout`/`stderr` `{"data"}` with `id:` = sequence, `event: gap` `{"error"}` (output lost between seqs), `event: error`, terminal `event: done` `{"status":"disconnected"}`. After the command has exited the stream is either 404 (unknown execId) or `event: error` ("session not re-attachable …") followed by `done` — SDKs end the iterator in both cases. Detaching never kills the process (guide §8.3 / §15.4) |
 | `POST /sandboxes/{id}/commands/kill` | `{pid, signal=9}` | `{"status":"ok"}` |
 | `POST /sandboxes/{id}/commands/send-stdin` | `{pid, data}` | `{"status":"ok"}` |
 
