@@ -203,12 +203,24 @@ export interface CommandResult {
 }
 
 export interface ExecEvent {
-  kind: 'stdout' | 'stderr' | 'exit' | 'error'
-  /** Output chunk for stdout/stderr, error message for error. */
+  /**
+   * `execStream` yields stdout / stderr then `exit` (or `error`). A background command's
+   * `connect()` yields stdout / stderr, `gap` when the server evicted unread output, `error`,
+   * and ends with `done` instead of `exit`.
+   */
+  kind: 'stdout' | 'stderr' | 'exit' | 'error' | 'gap' | 'done'
+  /** Output chunk for stdout/stderr, error message for error/gap, status for done. */
   data?: string
   exitCode?: number
   execId?: string
   stage?: string
+  /** Server sequence id of an output chunk (`connect()` only) — pass as `fromSeq` to re-attach. */
+  seq?: number
+}
+
+export interface ConnectOptions {
+  /** Re-attach after this sequence id (the last `seq` you processed); omit to start from the beginning. */
+  fromSeq?: number
 }
 
 export interface RunCodeOptions {

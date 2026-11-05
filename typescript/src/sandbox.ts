@@ -2,7 +2,7 @@ import { NotFoundError, SbBoxError, WaitTimeoutError } from './errors.js'
 import { ensureStringMap, type Http } from './http.js'
 import { parseJsonData, parseSse } from './sse.js'
 import type {
-  CodeResult, CommandResult, ExecEvent, ExecOptions, FileEntry, Grant, GrantOptions, MetricPoint,
+  CodeResult, CommandResult, ConnectOptions, ExecEvent, ExecOptions, FileEntry, Grant, GrantOptions, MetricPoint,
   ProcessInfo, PtyEvent, PtyOptions, RunCodeOptions, SandboxInfo, SandboxState, SandboxVersion,
   StartCommandOptions, WaitOptions,
 } from './types.js'
@@ -39,11 +39,19 @@ async function* execEvents(res: Response): AsyncGenerator<ExecEvent> {
         execId = typeof d.execId === 'string' ? d.execId : undefined
         break
       case 'stdout':
-      case 'stderr':
-        yield { kind: m.event, data: String(d.data ?? ''), execId }
+      case 'stderr': {
+        const seq = m.id !== undefined && /^\d+$/.test(m.id) ? Number(m.id) : undefined
+        yield { kind: m.event, data: String(d.data ?? ''), execId, ...(seq !== undefined ? { seq } : {}) }
         break
+      }
       case 'exit':
         yield { kind: 'exit', exitCode: Number(d.exitCode ?? 0), execId }
+        return
+      case 'gap':
+        yield { kind: 'gap', data: String(d.error ?? m.data), execId }
+        break
+      case 'done':
+        yield { kind: 'done', data: String(d.status ?? ''), execId }
         return
       case 'error':
         yield { kind: 'error', data: String(d.error ?? m.data), stage: typeof d.stage === 'string' ? d.stage : undefined, execId }
@@ -87,14 +95,20 @@ export class BackgroundCommand {
   }
 
   /**
-   * Experimental: stream the command's output over SSE. Not part of the documented SB-Box
-   * contract (the user guide states background-command output is not streamed); may change or
-   * disappear without notice. Resolves to an empty stream if the server already reaped it.
+   * Attach to the command's output stream (SSE; user guide §8.3 / §15.4). Yields `stdout` /
+   * `stderr` events carrying `seq`, a `gap` event when the server had to drop unread output,
+   * `error` on a server-side failure, and a final `done` event once the command has exited.
+   * Detaching never kills the command. Pass `fromSeq` (the last `seq` you processed) to
+   * re-attach without replay. A command the server already reaped yields nothing (404) or an
+   * `error` event followed by `done`.
    */
-  async *connect(): AsyncGenerator<ExecEvent> {
+  async *connect(opts: ConnectOptions = {}): AsyncGenerator<ExecEvent> {
     let res: Response
     try {
-      res = await this.http.raw(this.p('/connect'), { headers: { Accept: 'text/event-stream' }, timeout: 3600, bodyDeadline: false })
+      res = await this.http.raw(this.p('/connect'), {
+        headers: { Accept: 'text/event-stream' }, timeout: 3600, bodyDeadline: false,
+        query: opts.fromSeq ? { from_seq: opts.fromSeq } : undefined,
+      })
     } catch (e) {
       if (e instanceof NotFoundError) return
       throw e

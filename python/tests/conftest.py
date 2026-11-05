@@ -45,8 +45,14 @@ def _json(status: int, body: Any, headers: Optional[Dict[str, str]] = None) -> h
 
 def _sse(events: List[tuple]) -> httpx.Response:
     def gen():
-        for i, (name, payload) in enumerate(events):
-            yield f"id: {i}\nevent: {name}\ndata: {json.dumps(payload)}\n\n".encode()
+        seq = 0
+        for name, payload in events:
+            # Like the server: only output chunks carry an ``id:`` (their sequence number).
+            idline = ""
+            if name in ("stdout", "stderr", "data"):
+                seq += 1
+                idline = f"id: {seq}\n"
+            yield f"{idline}event: {name}\ndata: {json.dumps(payload)}\n\n".encode()
 
     return httpx.Response(
         200, headers={"content-type": "text/event-stream"}, stream=httpx.ByteStream(b"".join(gen()))
@@ -64,6 +70,7 @@ class MockAPI:
         self.build_polls = 0
         self.clone_calls = 0
         self.fail_first = 0  # transient 503s before success on GET
+        self.connect_from_seq: Optional[str] = None
 
     # helpers for assertions
     @property
@@ -238,7 +245,17 @@ class MockAPI:
         if p == "/sandboxes/sbx-abc123/commands/bg1/wait":
             return _json(200, {"exitCode": 7})
         if p == "/sandboxes/sbx-abc123/commands/bg1/connect":
-            return _sse([("stdout", {"data": "bg"}), ("exit", {"exitCode": 0})])
+            self.connect_from_seq = q.get("from_seq")
+            return _sse(
+                [
+                    ("stdout", {"data": "bg"}),
+                    ("stderr", {"data": "warn"}),
+                    ("gap", {"error": "output gap — ring evicted unread bytes"}),
+                    ("done", {"status": "disconnected"}),
+                ]
+            )
+        if p == "/sandboxes/sbx-abc123/commands/gone/connect":
+            return _json(404, {"detail": "command not found"})
         if p in ("/sandboxes/sbx-abc123/commands/kill", "/sandboxes/sbx-abc123/commands/send-stdin"):
             return _json(200, {"status": "ok"})
         if p == "/sandboxes/sbx-abc123/files/stream" and m == "POST":

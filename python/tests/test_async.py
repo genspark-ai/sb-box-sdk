@@ -30,7 +30,7 @@ async def test_async_full_flow(aclient, api, monkeypatch):
         await cmd.input("hi")
         await cmd.close()
         assert await cmd.wait() == 7
-        assert [e.kind async for e in cmd.connect()] == ["stdout", "exit"]
+        assert [e.kind async for e in cmd.connect()] == ["stdout", "stderr", "gap", "done"]
         await cmd.kill()
         assert (await sb.commands.list())[0].exec_id == "bg1"
         pty = await sb.pty.open()

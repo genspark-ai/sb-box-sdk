@@ -197,7 +197,14 @@ def test_background_commands(client, api):
     assert api.body() == {"data": "hello"}
     cmd.close()
     assert cmd.wait() == 7
-    assert [e.kind for e in cmd.connect()] == ["stdout", "exit"]
+    evs = list(cmd.connect())
+    assert [e.kind for e in evs] == ["stdout", "stderr", "gap", "done"]
+    assert evs[0].seq == "1" and evs[1].seq == "2" and evs[1].data == "warn"
+    assert evs[2].error.startswith("output gap") and evs[3].data == "disconnected"
+    assert api.connect_from_seq is None
+    assert [e.kind for e in cmd.connect(from_seq=2)] and api.connect_from_seq == "2"
+    gone = type(cmd)(cmd._http, cmd.sandbox_id, "gone", cmd.pid)
+    assert list(gone.connect()) == []
     cmd.kill()
     assert api.body() == {"pid": 42, "signal": 9}
     assert sb.commands.list()[0].pid == 42

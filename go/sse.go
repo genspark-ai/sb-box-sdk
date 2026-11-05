@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/json"
 	"io"
+	"strconv"
 	"strings"
 )
 
@@ -89,6 +90,9 @@ func (s *ExecStream) Next() (ExecEvent, bool) {
 		var body map[string]any
 		_ = json.Unmarshal([]byte(raw.Data), &body)
 		ev := ExecEvent{Kind: raw.Event}
+		if raw.ID != "" {
+			ev.Seq, _ = strconv.ParseInt(raw.ID, 10, 64)
+		}
 		switch raw.Event {
 		case "execId":
 			ev.ExecID, _ = body["execId"].(string)
@@ -101,6 +105,12 @@ func (s *ExecStream) Next() (ExecEvent, bool) {
 			if c, ok := body["exitCode"].(float64); ok {
 				ev.ExitCode = int(c)
 			}
+			s.done = true
+			_ = s.sse.close()
+		case "gap":
+			ev.Data, _ = body["error"].(string)
+		case "done":
+			ev.Data, _ = body["status"].(string)
 			s.done = true
 			_ = s.sse.close()
 		case "error":

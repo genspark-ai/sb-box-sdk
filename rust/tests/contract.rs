@@ -462,7 +462,7 @@ async fn exec_stream_and_background_commands() {
     Mock::given(method("GET"))
         .and(path("/v1/sandboxes/sbx-1/commands/bg1/connect"))
         .respond_with(sse(
-            "event: stdout\ndata: {\"data\":\"abc\"}\n\nevent: exit\ndata: {\"exitCode\":0}\n\n",
+            "id: 1\nevent: stdout\ndata: {\"data\":\"abc\"}\n\nid: 2\nevent: stderr\ndata: {\"data\":\"warn\"}\n\nevent: gap\ndata: {\"error\":\"output gap — ring evicted unread bytes\"}\n\nevent: done\ndata: {\"status\":\"disconnected\"}\n\n",
         ))
         .mount(&server)
         .await;
@@ -503,7 +503,36 @@ async fn exec_stream_and_background_commands() {
         .map(|e| e.unwrap())
         .collect()
         .await;
-    assert_eq!(evs.len(), 2);
+    assert_eq!(
+        evs,
+        vec![
+            ExecEvent::Stdout("abc".into()),
+            ExecEvent::Stderr("warn".into()),
+            ExecEvent::Gap {
+                message: "output gap — ring evicted unread bytes".into()
+            },
+            ExecEvent::Done,
+        ]
+    );
+    let seqs: Vec<_> = bg
+        .connect_with_seq(0)
+        .await
+        .unwrap()
+        .map(|e| e.unwrap().0)
+        .collect()
+        .await;
+    assert_eq!(seqs, vec![Some(1), Some(2), None, None]);
+    let n = bg.connect_from(2).await.unwrap().count().await;
+    assert_eq!(
+        n, 4,
+        "mock ignores from_seq; the request must still succeed"
+    );
+    let reqs = server.received_requests().await.unwrap();
+    assert!(
+        reqs.iter()
+            .any(|r| r.url.path().ends_with("/connect") && r.url.query() == Some("from_seq=2")),
+        "connect_from(2) sends ?from_seq=2"
+    );
     assert_eq!(bg.wait().await.unwrap(), 0);
     assert_eq!(sb.commands().list().await.unwrap()[0].pid, Some(42));
     bg.kill(None).await.unwrap();

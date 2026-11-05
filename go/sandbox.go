@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strconv"
 	"time"
 )
 
@@ -265,14 +266,24 @@ func (b *BackgroundCommand) Kill(ctx context.Context, signal int) error {
 	return b.sb.Commands.Kill(ctx, b.PID, signal)
 }
 
-// Connect streams the command's output (SSE). A NotFoundError means the command
-// was already reaped.
-//
-// Experimental: not part of the documented SB-Box contract (the user guide states
-// background-command output is not streamed); the endpoint may change or disappear
-// without notice.
+// Connect attaches to the command's output stream (SSE; user guide §8.3 /
+// §15.4). The stream yields "stdout" / "stderr" events carrying Seq, a "gap"
+// event when the server had to drop unread output, "error" on a server-side
+// failure, and a final "done" event once the command has exited. Detaching
+// never kills the command. A command the server already reaped answers either
+// a NotFoundError or an "error" event followed by "done".
 func (b *BackgroundCommand) Connect(ctx context.Context) (*ExecStream, error) {
-	resp, err := b.sb.c.do(ctx, &requestSpec{method: http.MethodGet, path: b.path("/connect"), timeout: -1, accept: "text/event-stream"})
+	return b.ConnectFrom(ctx, 0)
+}
+
+// ConnectFrom is Connect re-attaching after fromSeq (the last Seq you
+// processed) so nothing is replayed; 0 starts from the beginning.
+func (b *BackgroundCommand) ConnectFrom(ctx context.Context, fromSeq int64) (*ExecStream, error) {
+	spec := &requestSpec{method: http.MethodGet, path: b.path("/connect"), timeout: -1, accept: "text/event-stream"}
+	if fromSeq > 0 {
+		spec.query = url.Values{"from_seq": {strconv.FormatInt(fromSeq, 10)}}
+	}
+	resp, err := b.sb.c.do(ctx, spec)
 	if err != nil {
 		return nil, err
 	}

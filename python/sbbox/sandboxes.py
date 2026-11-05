@@ -9,7 +9,7 @@ from typing import Any, Dict, List, Optional, Union
 
 from ._client import NO_DEADLINE, _AsyncHTTP, _SyncHTTP, check_metadata, compact, normalize_command
 from ._sse import SSEEvent
-from .errors import ConflictError, WaitTimeout
+from .errors import ConflictError, NotFoundError, WaitTimeout
 from .templates import _grant_body
 from .types import (
     CodeResult,
@@ -209,14 +209,22 @@ class BackgroundCommand:
             "POST", f"/sandboxes/{self.sandbox_id}/commands/kill", body={"pid": self.pid, "signal": signal}
         )
 
-    def connect(self) -> Iterator[ExecEvent]:
-        """Experimental: stream the command's output over SSE.
+    def connect(self, *, from_seq: Optional[int] = None) -> Iterator[ExecEvent]:
+        """Attach to the command's output stream (SSE; user guide §8.3 / §15.4).
 
-        Not part of the documented SB-Box contract (the user guide states background-command
-        output is not streamed); the endpoint may change or disappear without notice.
+        Yields ``stdout`` / ``stderr`` events carrying ``seq``, a ``gap`` event when the server had
+        to drop unread output, ``error`` on a server-side failure, and a final ``done`` event when
+        the command has exited (the stream then ends). Detaching never kills the command. Pass
+        ``from_seq`` (the last ``seq`` you processed) to re-attach without replay. A command the
+        server has already reaped answers either nothing (404) or an ``error`` event followed by
+        ``done``.
         """
-        for ev in self._http.sse("GET", self._p("connect"), timeout=NO_DEADLINE):
-            yield _exec_event(ev)
+        params = {"from_seq": from_seq} if from_seq else None
+        try:
+            for ev in self._http.sse("GET", self._p("connect"), params=params, timeout=NO_DEADLINE):
+                yield _exec_event(ev)
+        except NotFoundError:
+            return
 
 
 class Commands:
@@ -632,14 +640,19 @@ class AsyncBackgroundCommand:
             "POST", f"/sandboxes/{self.sandbox_id}/commands/kill", body={"pid": self.pid, "signal": signal}
         )
 
-    async def connect(self) -> AsyncIterator[ExecEvent]:
-        """Experimental: stream the command's output over SSE.
+    async def connect(self, *, from_seq: Optional[int] = None) -> AsyncIterator[ExecEvent]:
+        """Attach to the command's output stream (SSE; user guide §8.3 / §15.4).
 
-        Not part of the documented SB-Box contract (the user guide states background-command
-        output is not streamed); the endpoint may change or disappear without notice.
+        Same events as the sync variant: ``stdout`` / ``stderr`` (with ``seq``), ``gap``,
+        ``error``, then a final ``done``. ``from_seq`` re-attaches without replay; a reaped
+        command yields nothing (404) or ``error`` then ``done``.
         """
-        async for ev in self._http.sse("GET", self._p("connect"), timeout=NO_DEADLINE):
-            yield _exec_event(ev)
+        params = {"from_seq": from_seq} if from_seq else None
+        try:
+            async for ev in self._http.sse("GET", self._p("connect"), params=params, timeout=NO_DEADLINE):
+                yield _exec_event(ev)
+        except NotFoundError:
+            return
 
 
 class AsyncCommands:

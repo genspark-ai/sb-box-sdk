@@ -280,7 +280,13 @@ class CommandResult:
 
 @dataclass
 class ExecEvent:
-    """One event of a streamed command: kind ∈ {"execId", "stdout", "stderr", "exit", "error"}."""
+    """One event of a streamed command.
+
+    ``kind`` ∈ {"execId", "stdout", "stderr", "exit", "error"} for ``exec_stream``; a background
+    command's ``connect()`` additionally yields "gap" (the server evicted unread output; ``error``
+    says so) and ends with "done" instead of "exit". ``seq`` is the server's sequence id of an
+    output chunk — pass it as ``from_seq`` to re-attach without replaying what you already saw.
+    """
 
     kind: str
     data: str = ""
@@ -300,8 +306,10 @@ class ExecEvent:
         if event == "exit":
             code = _get(p, "exitCode", "exit_code")
             return cls(kind="exit", exit_code=int(code) if code is not None else None, seq=seq)
-        if event == "error":
-            return cls(kind="error", error=p.get("error") or str(payload), stage=p.get("stage"), seq=seq)
+        if event in ("error", "gap"):
+            return cls(kind=event, error=p.get("error") or str(payload), stage=p.get("stage"), seq=seq)
+        if event == "done":
+            return cls(kind="done", data=str(p.get("status") or ""), seq=seq)
         return cls(kind=event, data=str(payload) if payload is not None else "", seq=seq)
 
 

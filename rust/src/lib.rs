@@ -43,6 +43,7 @@ pub use client::{Client, ClientBuilder};
 pub use error::{redact, ApiErrorBody, Error, LimitInfo, Result};
 pub use sandbox::{
     BackgroundCommand, Command, Commands, EventStream, Files, Pty, PtySession, Sandbox,
+    SeqEventStream,
 };
 pub use sandboxes::Sandboxes;
 pub use templates::Templates;

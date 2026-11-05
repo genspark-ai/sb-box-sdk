@@ -200,9 +200,9 @@ describe('commands', () => {
     const events = []
     for await (const e of s.execStream(['echo'])) events.push(e)
     expect(events).toEqual([
-      { kind: 'stdout', data: 'hello\n', execId: 'e1' },
-      { kind: 'stderr', data: 'warn\n', execId: 'e1' },
-      { kind: 'stdout', data: 'multi\nline', execId: 'e1' },
+      { kind: 'stdout', data: 'hello\n', execId: 'e1', seq: 1 },
+      { kind: 'stderr', data: 'warn\n', execId: 'e1', seq: 2 },
+      { kind: 'stdout', data: 'multi\nline', execId: 'e1', seq: 3 },
       { kind: 'exit', exitCode: 2, execId: 'e1' },
     ])
     const errs = []

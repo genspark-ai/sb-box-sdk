@@ -282,13 +282,21 @@ type CommandResult struct {
 }
 
 // ExecEvent is one event of a streamed command.
+//
+// ExecStream yields "stdout" / "stderr" then "exit" (or "error"). A background
+// command's Connect yields "stdout" / "stderr" (with Seq), "gap" when the server
+// evicted unread output (Data says so), "error", and ends with "done" instead
+// of "exit".
 type ExecEvent struct {
-	// Kind is "stdout", "stderr", "exit" or "error".
+	// Kind is "stdout", "stderr", "exit", "error", "gap" or "done".
 	Kind     string
 	Data     string
 	ExitCode int
 	ExecID   string
 	Stage    string
+	// Seq is the server sequence id of an output chunk (Connect only); pass it
+	// to ConnectFrom to re-attach without replay.
+	Seq int64
 }
 
 // RunCodeOptions are the inputs of run-code.

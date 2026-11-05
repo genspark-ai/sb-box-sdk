@@ -447,9 +447,31 @@ func TestBackgroundCommands(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ev, ok := st.Next()
-	if !ok || ev.Kind != "stdout" || ev.Data != "bg out" {
-		t.Fatalf("connect: %+v", ev)
+	var got []ExecEvent
+	for {
+		ev, ok := st.Next()
+		if !ok {
+			break
+		}
+		got = append(got, ev)
+	}
+	if st.Err() != nil || len(got) != 4 ||
+		got[0].Kind != "stdout" || got[0].Data != "bg out" || got[0].Seq != 1 ||
+		got[1].Kind != "stderr" || got[1].Seq != 2 ||
+		got[2].Kind != "gap" || !strings.HasPrefix(got[2].Data, "output gap") ||
+		got[3].Kind != "done" || got[3].Data != "disconnected" {
+		t.Fatalf("connect events: %+v err=%v", got, st.Err())
+	}
+	if m.connectFromSeq != "" {
+		t.Fatalf("plain Connect must not send from_seq, got %q", m.connectFromSeq)
+	}
+	st2, err := bg.ConnectFrom(ctx, 2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	st2.Close()
+	if m.connectFromSeq != "2" {
+		t.Fatalf("ConnectFrom(2) sent from_seq=%q", m.connectFromSeq)
 	}
 	if _, err := sb.Commands.Attach("gone", 1).Connect(ctx); !IsNotFound(err) {
 		t.Fatalf("reaped → NotFound: %v", err)

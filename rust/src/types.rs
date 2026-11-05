@@ -427,7 +427,13 @@ impl CommandResult {
 }
 
 /// One event from a streaming exec / background command / PTY.
+///
+/// `exec_stream` yields `Stdout` / `Stderr` then `Exit` (or `Error`). A background
+/// command's `connect()` yields `Stdout` / `Stderr`, `Gap` when the server evicted
+/// unread output, `Error`, and ends with `Done` instead of `Exit`. New variants may
+/// be added; match with a wildcard arm.
 #[derive(Debug, Clone, PartialEq)]
+#[non_exhaustive]
 pub enum ExecEvent {
     /// First event: the execution id.
     Started {
@@ -445,6 +451,12 @@ pub enum ExecEvent {
         message: String,
         stage: Option<String>,
     },
+    /// `connect()` only: the server dropped unread output between two attachments.
+    Gap {
+        message: String,
+    },
+    /// `connect()` only: the command has exited and the stream is over.
+    Done,
 }
 
 /// A background command started with `commands.start`.

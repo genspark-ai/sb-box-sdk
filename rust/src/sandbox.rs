@@ -20,6 +20,9 @@ use crate::types::{
 
 /// Boxed event stream returned by streaming calls.
 pub type EventStream = Pin<Box<dyn Stream<Item = Result<ExecEvent>> + Send>>;
+/// [`EventStream`] items paired with the server sequence id of output chunks
+/// (see `BackgroundCommand::connect_with_seq`).
+pub type SeqEventStream = Pin<Box<dyn Stream<Item = Result<(Option<u64>, ExecEvent)>> + Send>>;
 
 /// A handle to one sandbox. Obtained from `client.sandboxes().create/get`.
 #[derive(Debug, Clone)]
@@ -98,8 +101,17 @@ fn to_exec_event(ev: SseEvent) -> Option<ExecEvent> {
             message: s("error").unwrap_or_else(|| ev.data.clone()),
             stage: s("stage"),
         },
+        "gap" => ExecEvent::Gap {
+            message: s("error").unwrap_or_else(|| ev.data.clone()),
+        },
+        "done" => ExecEvent::Done,
         _ => return None,
     })
+}
+
+/// The server sequence id (`id:` line) of an SSE event, when it carries one.
+fn seq_of(ev: &SseEvent) -> Option<u64> {
+    ev.id.as_deref().and_then(|s| s.parse().ok())
 }
 
 fn event_stream(resp: reqwest::Response) -> EventStream {
@@ -383,14 +395,58 @@ impl BackgroundCommand {
             None => Err(Error::Config("background command has no pid".into())),
         }
     }
-    /// Experimental: attach to the command's output stream (SSE).
+    /// Attach to the command's output stream (SSE; user guide §8.3 / §15.4).
     ///
-    /// Not part of the documented SB-Box contract (the user guide states background-command
-    /// output is not streamed); the endpoint may change or disappear without notice.
+    /// Yields [`ExecEvent::Stdout`] / [`ExecEvent::Stderr`], [`ExecEvent::Gap`] when the server
+    /// had to drop unread output, [`ExecEvent::Error`] on a server-side failure, and a final
+    /// [`ExecEvent::Done`] once the command has exited. Detaching never kills the command.
+    /// A command the server already reaped answers either `404` (`Error::NotFound`) or an
+    /// [`ExecEvent::Error`] followed by [`ExecEvent::Done`]. Use
+    /// [`connect_from`](Self::connect_from) to re-attach without replay.
     pub async fn connect(&self) -> Result<EventStream> {
         self.sb
             .sse_get(&format!("commands/{}/connect", self.info.exec_id))
             .await
+    }
+
+    /// [`connect`](Self::connect) re-attaching after `from_seq` (the last sequence id you
+    /// processed, see [`connect_with_seq`](Self::connect_with_seq)); `0` starts from the
+    /// beginning.
+    pub async fn connect_from(&self, from_seq: u64) -> Result<EventStream> {
+        let suffix = if from_seq > 0 {
+            format!("commands/{}/connect?from_seq={from_seq}", self.info.exec_id)
+        } else {
+            format!("commands/{}/connect", self.info.exec_id)
+        };
+        self.sb.sse_get(&suffix).await
+    }
+
+    /// Like [`connect_from`](Self::connect_from) but each item also carries the server
+    /// sequence id of the chunk (`None` for `Gap` / `Done` / `Error`), which is what you hand
+    /// back as `from_seq` to resume after a dropped connection.
+    pub async fn connect_with_seq(&self, from_seq: u64) -> Result<SeqEventStream> {
+        let suffix = if from_seq > 0 {
+            format!("commands/{}/connect?from_seq={from_seq}", self.info.exec_id)
+        } else {
+            format!("commands/{}/connect", self.info.exec_id)
+        };
+        let timeout = Duration::from_secs(24 * 3600);
+        let prepared = self
+            .sb
+            .t
+            .execute(Retry::Never, timeout, || {
+                self.sb
+                    .t
+                    .builder(reqwest::Method::GET, &self.sb.p(&suffix), timeout)
+                    .header(reqwest::header::ACCEPT, "text/event-stream")
+            })
+            .await?;
+        Ok(Box::pin(
+            events(prepared.response.bytes_stream()).try_filter_map(|ev| {
+                let seq = seq_of(&ev);
+                std::future::ready(Ok(to_exec_event(ev).map(|e| (seq, e))))
+            }),
+        ))
     }
 }
 

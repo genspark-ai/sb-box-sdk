@@ -25,6 +25,8 @@ type mockServer struct {
 	reqs   []recordedReq
 	files  map[string][]byte
 	freeze int // GET /sandboxes/sbx-freeze polls before "frozen"
+	// connectFromSeq records the from_seq query of the last commands connect.
+	connectFromSeq string
 	// When set, GET /sandboxes/sbx-freeze answers these states in order
 	// (the last one repeats) instead of the freeze countdown.
 	freezeStates []string
@@ -275,7 +277,14 @@ func (m *mockServer) route(w http.ResponseWriter, r *http.Request, body []byte) 
 	case p == "/sandboxes/sbx-1/commands/bg1/wait":
 		writeJSON(w, 200, map[string]any{"exitCode": 7})
 	case p == "/sandboxes/sbx-1/commands/bg1/connect":
-		sse(w, "event: stdout\ndata: {\"data\":\"bg out\"}\n\n", "event: exit\ndata: {\"exitCode\":0}\n\n")
+		m.mu.Lock()
+		m.connectFromSeq = r.URL.Query().Get("from_seq")
+		m.mu.Unlock()
+		sse(w,
+			"id: 1\nevent: stdout\ndata: {\"data\":\"bg out\"}\n\n",
+			"id: 2\nevent: stderr\ndata: {\"data\":\"warn\"}\n\n",
+			"event: gap\ndata: {\"error\":\"output gap — ring evicted unread bytes\"}\n\n",
+			"event: done\ndata: {\"status\":\"disconnected\"}\n\n")
 	case p == "/sandboxes/sbx-1/commands/gone/connect":
 		writeJSON(w, 404, map[string]any{"detail": "command not found"})
 
