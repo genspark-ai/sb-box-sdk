@@ -899,7 +899,9 @@ async fn error_mapping_table() {
         other => panic!("{other:?}"),
     }
     assert!(matches!(got[8], Error::Conflict { .. }));
-    assert!(matches!(got[9], Error::DiskLost { .. }));
+    assert!(
+        matches!(&got[9], Error::DiskLost { recovery, .. } if recovery == &vec!["rollback".to_string()])
+    );
     assert_eq!(got[9].code(), Some("disk_lost"));
     assert!(matches!(&got[10], Error::Validation { errors, .. } if errors.len() == 1));
     assert!(

@@ -90,7 +90,7 @@ Every failure is an `SbBoxError` with `status`, `code`, `message`, `detail` (raw
 | `NotFoundError`, `RegionRetiredError` | 404 — unknown or killed sandbox, retired region |
 | `CommandTimeoutError` (`killed`) | 408 — `exec` ran past its timeout |
 | `MemoryExpiredError` (`recovery`) | 428 — frozen memory expired; `reset()` boots from disk |
-| `DiskLostError` | 410 — the disk is gone; create a new sandbox (rollback and reset are refused too) |
+| `DiskLostError` | 410 — the disk is gone; `rollback(0)` if the sandbox has save points (`versions`), otherwise create a new sandbox; `.recovery` lists what the server accepts |
 | `InterpreterUnavailableError`, `InterpreterStartFailedError` | `runCode` on an image without the interpreter |
 | `ValidationError` | 400 / 422 |
 | `ServerError`, `SbBoxConnectionError` | 5xx, network / timeout |

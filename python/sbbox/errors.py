@@ -136,7 +136,17 @@ class InterpreterUnavailableError(ConflictError):
 
 
 class DiskLostError(SbBoxError):
-    pass
+    """410 — the disk is gone. ``recovery`` lists the accepted next steps
+    (``rollback`` when the sandbox has save points); otherwise create a new sandbox."""
+
+    @property
+    def recovery(self) -> List[str]:
+        return [str(x) for x in (self._field("recovery", []) or [])]
+
+    @property
+    def resumable(self) -> Optional[bool]:
+        v = self._field("resumable")
+        return None if v is None else bool(v)
 
 
 class MemoryExpiredError(SbBoxError):

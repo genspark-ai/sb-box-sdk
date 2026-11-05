@@ -102,7 +102,7 @@ function route(req: Recorded, res: http.ServerResponse, st: MockState) {
   if (p === '/errors/limit') return send(res, 409, { detail: { code: 'sb_box_concurrency_limit', plan: 'plus', limit: 20, current: 20, message: 'too many' } })
   if (p === '/errors/retired') return send(res, 404, { detail: { code: 'sb_box_region_retired', region: 'eastus', message: 'gone' } })
   if (p === '/errors/memory') return send(res, 428, { reason: 'memory_expired', recovery: ['reset'] })
-  if (p === '/errors/disk') return send(res, 410, { error: 'disk lost', reason: 'disk_lost', recovery: ['rollback'] })
+  if (p === '/errors/disk') return send(res, 410, { error: 'disk lost', reason: 'disk_lost', recovery: ['rollback'], resumable: false })
   if (p === '/errors/422') return send(res, 422, { status: -2, message: 'validation failed', errors: [{ loc: ['body', 'timeout'], msg: 'must be int' }] })
   if (p === '/errors/leak') return send(res, 400, { detail: `bad key ${KEY} rejected` })
   if (p === '/errors/interp') return send(res, 409, { error: 'no interpreter', code: 'sb_box_interpreter_unavailable' })

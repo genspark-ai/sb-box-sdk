@@ -106,6 +106,13 @@ def test_field_accessors():
     assert e.plan == "plus" and e.upgrade == "u"
     e = errors.error_for_response(428, {"reason": "memory_expired", "recovery": ["reset"]})
     assert e.recovery == ["reset"]
+    d = errors.error_for_response(
+        410, {"error": "disk lost", "reason": "disk_lost", "recovery": ["rollback"], "resumable": False}
+    )
+    assert isinstance(d, errors.DiskLostError)
+    assert d.recovery == ["rollback"] and d.resumable is False
+    bare = errors.error_for_response(410, {"error": "disk lost", "reason": "disk_lost"})
+    assert isinstance(bare, errors.DiskLostError) and bare.recovery == [] and bare.resumable is None
     e = errors.error_for_response(408, {"error": "t", "stage": "timeout", "killed": True})
     assert e.killed is True
     e = errors.error_for_response(422, {"status": -2, "message": "m", "errors": [{"loc": ["x"]}]})

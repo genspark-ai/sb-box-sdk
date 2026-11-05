@@ -325,7 +325,8 @@ func TestErrorMapping(t *testing.T) {
 		t.Fatalf("428: %v", err)
 	}
 	_, err = c.Sandboxes.Reset(ctx, "sbx-lost")
-	if !IsDiskLost(err) || Status(err) != 410 {
+	var de *DiskLostError
+	if !IsDiskLost(err) || Status(err) != 410 || !errors.As(err, &de) || len(de.Recovery()) != 1 || de.Recovery()[0] != "rollback" || de.Resumable() == nil || *de.Resumable() {
 		t.Fatalf("410: %v", err)
 	}
 	if e := unwrap(err); e.RequestID != "" && e.Detail == nil {

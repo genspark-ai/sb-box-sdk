@@ -38,7 +38,7 @@ Status → SDK error class (every class exposes `status`, `code`, `message`, `de
 | 404 | `NotFoundError` (`code=sb_box_region_retired` → `RegionRetiredError` subclass) |
 | 408 | `CommandTimeoutError` (exec: `stage=timeout`, `killed`) |
 | 409 | `LimitError` when `code` ends with `_limit` (`plan`, `limit`, `current`/`requested`); `InterpreterUnavailableError` when `code=sb_box_interpreter_unavailable`; else `ConflictError` |
-| 410 | `DiskLostError` — the disk is gone; create a new sandbox (rollback and reset are refused with 410 too) |
+| 410 | `DiskLostError` — `disk_lost` — the disk is gone. On resume/reset: `rollback(0)` restores the newest save point when the sandbox has `versions`; on rollback itself 410 means it was never frozen → create a new sandbox. The body may carry `recovery` / `resumable` |
 | 422 | `ValidationError` (collect `errors[]`) |
 | 428 | `MemoryExpiredError` (`recovery`) |
 | 499 | `ClientDisconnectedError` |
@@ -95,8 +95,8 @@ States: `starting, running, freezing, frozen, exited, failed, unknown` (list onl
 | `GET /sandboxes/{id}` | — | record |
 | `DELETE /sandboxes/{id}` | — | `{"status":"killed"}` |
 | `POST /sandboxes/{id}/freeze` | — | 200 record (frozen) · 200 `{"state":"frozen","status":"already frozen"}` · **202** `{"state":"freezing",…}` → poll GET until `frozen` (SDK `freeze(wait=True)` polls, default 90 s) |
-| `POST /sandboxes/{id}/resume` | `{timeout?}` | record (running); idempotent |
-| `POST /sandboxes/{id}/rollback` | `{version=0, timeout?}` | record; `version 0` = newest save point |
+| `POST /sandboxes/{id}/resume` | `{timeout?}` | record (running); idempotent. 410 `disk_lost` → `rollback` to version 0 if `versions` is non-empty, else recreate |
+| `POST /sandboxes/{id}/rollback` | `{version=0, timeout?}` | record; `version 0` = newest save point. 410 `disk_lost` here = never frozen and the disk is gone → create a new sandbox |
 | `POST /sandboxes/{id}/clone` | `{version=0, metadata?}` | new record (owner = caller); 503 + Retry-After while starting |
 | `POST /sandboxes/{id}/timeout` | `{timeout}` (0 clears) | `{"status":"ok"}` |
 | `POST /sandboxes/{id}/reset` | — | record (running) |

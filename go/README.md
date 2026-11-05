@@ -112,7 +112,7 @@ case sbbox.IsPlanRequired(err):        // 403 — upgrade required
 case errors.As(err, &limit):           // 409 — limit.Limit(), limit.Current()
 case sbbox.IsNotFound(err):            // 404 — unknown id, or the sandbox was killed
 case sbbox.IsMemoryExpired(err):       // 428 — resume refused; call Reset
-case sbbox.IsDiskLost(err):            // 410 — disk gone; create a new sandbox (rollback/reset refused too)
+case sbbox.IsDiskLost(err):            // 410 — disk gone; Rollback(ctx, 0) if it has save points, else recreate
 case sbbox.IsCommandTimeout(err):      // 408 — exec / run code hit its timeout
 case sbbox.IsTransport(err):           // network failure
 }

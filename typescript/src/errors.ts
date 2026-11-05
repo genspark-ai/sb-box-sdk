@@ -74,7 +74,11 @@ export class LimitError extends ConflictError {
   get requested(): number | undefined { return this.field<number>('requested') }
 }
 export class InterpreterUnavailableError extends ConflictError {}
-export class DiskLostError extends SbBoxError {}
+/** 410 — the disk is gone. `recovery` lists the accepted next steps (`rollback` when save points exist). */
+export class DiskLostError extends SbBoxError {
+  get recovery(): string[] { return this.field<string[]>('recovery') ?? [] }
+  get resumable(): boolean | undefined { return this.field<boolean>('resumable') }
+}
 export class MemoryExpiredError extends SbBoxError {
   get recovery(): string[] { return this.field<string[]>('recovery') ?? [] }
 }

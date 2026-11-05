@@ -201,7 +201,7 @@ func (m *mockServer) route(w http.ResponseWriter, r *http.Request, body []byte) 
 	case p == "/sandboxes/sbx-expired/resume":
 		writeJSON(w, 428, map[string]any{"reason": "memory_expired", "recovery": []string{"reset"}})
 	case p == "/sandboxes/sbx-lost/reset":
-		writeJSON(w, 410, map[string]any{"detail": map[string]any{"code": "disk_lost", "message": "disk lost", "recovery": []string{"rollback"}}})
+		writeJSON(w, 410, map[string]any{"detail": map[string]any{"code": "disk_lost", "message": "disk lost", "recovery": []string{"rollback"}, "resumable": false}})
 	case p == "/sandboxes/sbx-1/rollback":
 		if in["version"] != float64(0) {
 			writeJSON(w, 400, map[string]any{"error": "unknown version", "reason": "no_such_version", "resumable": true})

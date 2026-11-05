@@ -110,9 +110,13 @@ pub enum Error {
     /// 409 — the operation conflicts with the sandbox's current state.
     #[error("conflict: {body}")]
     Conflict { body: Box<ApiErrorBody> },
-    /// 410 — the sandbox's disk is gone; rollback to a saved version.
+    /// 410 — the sandbox's disk is gone. `recovery` lists the accepted next steps
+    /// (`rollback` when the sandbox has save points); otherwise create a new sandbox.
     #[error("disk lost: {body}")]
-    DiskLost { body: Box<ApiErrorBody> },
+    DiskLost {
+        body: Box<ApiErrorBody>,
+        recovery: Vec<String>,
+    },
     /// 428 — the memory snapshot expired; `recovery` lists the accepted next steps (e.g. `reset`).
     #[error("memory expired: {body}")]
     MemoryExpired {
@@ -160,7 +164,7 @@ impl Error {
             | Error::Limit { body, .. }
             | Error::InterpreterUnavailable { body }
             | Error::Conflict { body }
-            | Error::DiskLost { body }
+            | Error::DiskLost { body, .. }
             | Error::MemoryExpired { body, .. }
             | Error::ClientDisconnected { body }
             | Error::InterpreterStartFailed { body }
@@ -277,7 +281,10 @@ impl Error {
                 Error::InterpreterUnavailable { body }
             }
             409 => Error::Conflict { body },
-            410 => Error::DiskLost { body },
+            410 => Error::DiskLost {
+                recovery: string_list(detail.get("recovery")),
+                body,
+            },
             422 => Error::Validation {
                 errors: detail
                     .get("errors")
@@ -287,15 +294,7 @@ impl Error {
                 body,
             },
             428 => Error::MemoryExpired {
-                recovery: detail
-                    .get("recovery")
-                    .and_then(Value::as_array)
-                    .map(|a| {
-                        a.iter()
-                            .filter_map(|x| x.as_str().map(str::to_owned))
-                            .collect()
-                    })
-                    .unwrap_or_default(),
+                recovery: string_list(detail.get("recovery")),
                 body,
             },
             499 => Error::ClientDisconnected { body },
@@ -324,6 +323,16 @@ pub fn redact(s: &str) -> String {
     }
     out.push_str(rest);
     out
+}
+
+fn string_list(v: Option<&Value>) -> Vec<String> {
+    v.and_then(Value::as_array)
+        .map(|a| {
+            a.iter()
+                .filter_map(|x| x.as_str().map(str::to_owned))
+                .collect()
+        })
+        .unwrap_or_default()
 }
 
 #[cfg(test)]

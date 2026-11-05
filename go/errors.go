@@ -105,14 +105,28 @@ type InterpreterUnavailableError struct{ *APIError }
 // ConflictError — any other 409.
 type ConflictError struct{ *APIError }
 
-// DiskLostError — 410.
+// DiskLostError — 410; Recovery lists the accepted next steps ("rollback"
+// when the sandbox has save points), otherwise create a new sandbox.
 type DiskLostError struct{ *APIError }
+
+func (e *DiskLostError) Recovery() []string { return stringList(e.Fields["recovery"]) }
+
+// Resumable reports the body's "resumable" flag (nil when absent).
+func (e *DiskLostError) Resumable() *bool {
+	b, ok := e.Fields["resumable"].(bool)
+	if !ok {
+		return nil
+	}
+	return &b
+}
 
 // MemoryExpiredError — 428; Recovery lists the accepted next steps.
 type MemoryExpiredError struct{ *APIError }
 
-func (e *MemoryExpiredError) Recovery() []string {
-	raw, _ := e.Fields["recovery"].([]any)
+func (e *MemoryExpiredError) Recovery() []string { return stringList(e.Fields["recovery"]) }
+
+func stringList(v any) []string {
+	raw, _ := v.([]any)
 	out := make([]string, 0, len(raw))
 	for _, r := range raw {
 		if s, ok := r.(string); ok {
