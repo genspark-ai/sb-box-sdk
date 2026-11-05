@@ -72,7 +72,7 @@ Everything returns `sbbox::Result<T>`; `sbbox::Error` has one variant per API co
 | `Limit { info }` (`LimitInfo { code, plan, limit, current, requested }`) | 409 — concurrency / spec / build limit |
 | `InterpreterUnavailable`, `InterpreterStartFailed` | `run_code` on a template without the interpreter |
 | `Conflict` | 409 — operation conflicts with the sandbox's state |
-| `DiskLost` | 410 — the disk is gone; `rollback(0)` if the sandbox has save points (`versions`), otherwise create a new sandbox; `recovery` lists what the server accepts |
+| `DiskLost` | 410 — the disk is gone; branch on `recovery`: after `resume` it is `["reset","recreate"]` (never frozen); after `reset` it is `["resume","rollback","recreate"]` (`rollback(0)` restores the newest save point); otherwise create a new sandbox |
 | `MemoryExpired { recovery }` | 428 — snapshot expired; `reset` boots from disk |
 | `Validation { errors }` | 400 / 422 |
 | `Server`, `ClientDisconnected`, `Transport` | 5xx / 499 / network |

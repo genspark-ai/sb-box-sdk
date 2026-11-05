@@ -97,7 +97,7 @@ Every error derives from `sbbox.SbBoxError` and carries `status`, `code`, `messa
 | `NotFoundError` (404) | unknown or killed sandbox / template; `RegionRetiredError` subclass |
 | `CommandTimeoutError` (408) | `exec` exceeded its timeout (`.killed`) |
 | `MemoryExpiredError` (428) | the frozen memory image expired — call `sb.reset()` |
-| `DiskLostError` (410) | the disk is gone — `sb.rollback(0)` if the sandbox has save points (`versions`), otherwise create a new sandbox; `.recovery` lists what the server accepts |
+| `DiskLostError` (410) | the disk is gone — branch on `.recovery`: after `resume` it is `["reset","recreate"]` (never frozen); after `reset` it is `["resume","rollback","recreate"]` (`sb.rollback(0)` restores the newest save point); otherwise create a new sandbox |
 | `InterpreterUnavailableError` / `InterpreterStartFailedError` | `run_code` on an image without the interpreter |
 | `ValidationError` (400/422), `ConflictError` (409), `ServerError` (5xx), `TransportError` | the usual |
 | `TemplateBuildError`, `WaitTimeout` | raised by the client-side waits |

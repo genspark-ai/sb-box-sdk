@@ -38,7 +38,7 @@ Status → SDK error class (every class exposes `status`, `code`, `message`, `de
 | 404 | `NotFoundError` (`code=sb_box_region_retired` → `RegionRetiredError` subclass) |
 | 408 | `CommandTimeoutError` (exec: `stage=timeout`, `killed`) |
 | 409 | `LimitError` when `code` ends with `_limit` (`plan`, `limit`, `current`/`requested`); `InterpreterUnavailableError` when `code=sb_box_interpreter_unavailable`; else `ConflictError` |
-| 410 | `DiskLostError` — `disk_lost` — the disk is gone. On resume/reset: `rollback(0)` restores the newest save point when the sandbox has `versions`; on rollback itself 410 means it was never frozen → create a new sandbox. The body may carry `recovery` / `resumable` |
+| 410 | `DiskLostError` — `disk_lost`, body `{"error","reason":"disk_lost","resumable":false,"recovery":[…]}`. Follow `recovery`: on **resume** it is `["reset","recreate"]` (the sandbox was never frozen, so there is no save point); on **reset** it is `["resume","rollback","recreate"]` (`rollback(0)` restores the newest save point); on **rollback** 410 = never frozen → create a new sandbox |
 | 422 | `ValidationError` (collect `errors[]`) |
 | 428 | `MemoryExpiredError` (`recovery`) |
 | 499 | `ClientDisconnectedError` |
@@ -65,7 +65,7 @@ Retry policy (built in, configurable, default on): idempotent reads (GET) and `f
 
 Record: `id, name, description, namespace ("public"|"private"), base_image, status ("building"|"ready"|"error"),
 buildError?, region, is_owner, can_create, cogen_id?, created_at, updated_at` (plus `cpuCount, memoryMB,
-diskSizeGB` on GET, plus the undocumented `startCmd, readyCmd` — see "Beyond the documented contract").
+diskSizeGB` on GET; `startCmd`/`readyCmd` are build inputs only and are NOT returned).
 
 | Method / path | Body / query | Response |
 |---|---|---|
@@ -95,11 +95,11 @@ States: `starting, running, freezing, frozen, exited, failed, unknown` (list onl
 | `GET /sandboxes/{id}` | — | record |
 | `DELETE /sandboxes/{id}` | — | `{"status":"killed"}` |
 | `POST /sandboxes/{id}/freeze` | — | 200 record (frozen) · 200 `{"state":"frozen","status":"already frozen"}` · **202** `{"state":"freezing",…}` → poll GET until `frozen` (SDK `freeze(wait=True)` polls, default 90 s) |
-| `POST /sandboxes/{id}/resume` | `{timeout?}` | record (running); idempotent. 410 `disk_lost` → `rollback` to version 0 if `versions` is non-empty, else recreate |
+| `POST /sandboxes/{id}/resume` | `{timeout?}` | record (running); idempotent. 410 `disk_lost` = never frozen and the disk is gone → `recovery: [\"reset\",\"recreate\"]` |
 | `POST /sandboxes/{id}/rollback` | `{version=0, timeout?}` | record; `version 0` = newest save point. 410 `disk_lost` here = never frozen and the disk is gone → create a new sandbox |
 | `POST /sandboxes/{id}/clone` | `{version=0, metadata?}` | new record (owner = caller); 503 + Retry-After while starting |
 | `POST /sandboxes/{id}/timeout` | `{timeout}` (0 clears) | `{"status":"ok"}` |
-| `POST /sandboxes/{id}/reset` | — | record (running) |
+| `POST /sandboxes/{id}/reset` | — | record (running); 410 `disk_lost` → `recovery: ["resume","rollback","recreate"]` — `rollback(0)` when `versions` is non-empty |
 | `GET /sandboxes/{id}/metrics?start=&end=` | unix seconds | `[{timestamp,timestampUnix,cpuCount,cpuUsedPct,memUsed,memTotal,memCache,diskUsed,diskTotal}]` |
 | `PUT/GET/DELETE /sandboxes/{id}/grants[/{userId}]` | as templates | as templates (`sandbox_id`) |
 
@@ -115,7 +115,7 @@ States: `starting, running, freezing, frozen, exited, failed, unknown` (list onl
 | `POST /sandboxes/{id}/commands/{execId}/input` | `{data}` | `{"written"}` |
 | `POST /sandboxes/{id}/commands/{execId}/close` | — | `{"status":"ok"}` |
 | `POST /sandboxes/{id}/commands/{execId}/wait` | — | `{"exitCode"}` (blocks) |
-| `GET /sandboxes/{id}/commands/{execId}/connect` | — | **Experimental, undocumented** (see "Beyond the documented contract"): SSE stream of the background command's output (same events as sse/exec; treat 404 as "already reaped") |
+| `GET /sandboxes/{id}/commands/{execId}/connect` | header `Last-Event-ID` or `?from_seq=` to reattach | SSE: `stdout`/`stderr` `{"data"}` with `id:` = sequence, `event: gap` `{"error"}` (output lost between seqs), `event: error`, terminal `event: done` `{"status":"disconnected"}`; 404 once the command is reaped. Detaching never kills the process (guide §8.3 / §15.4) |
 | `POST /sandboxes/{id}/commands/kill` | `{pid, signal=9}` | `{"status":"ok"}` |
 | `POST /sandboxes/{id}/commands/send-stdin` | `{pid, data}` | `{"status":"ok"}` |
 
@@ -137,17 +137,6 @@ States: `starting, running, freezing, frozen, exited, failed, unknown` (list onl
 | `POST /sandboxes/{id}/pty/{execId}/resize` | `{rows, cols}` | `{"status":"ok"}` |
 | `POST /sandboxes/{id}/pty/{execId}/kill` | — | `{"status":"ok"}` |
 | `GET /sandboxes/{id}/ws/pty` (WebSocket) | first frame `{command?,cwd?,rows?,cols?,envVars?}` within 10 s; then `{"type":"stdin","data"}`, `{"type":"resize","rows","cols"}`, `{"type":"kill"}` | server frames `{"type":"stdout","data","seq"}`, `{"type":"exit","exitCode"}`, `{"type":"error","error"}`; auth `?api_key=` or `X-Api-Key` |
-
-## Beyond the documented contract
-
-The service currently serves three things the public user guide does not document. The SDKs
-implement them, but they are **not part of the contract and may change or disappear without
-notice** — surface them as *experimental*:
-
-1. `GET /sandboxes/{id}/commands/{execId}/connect` — SSE output of a background command (the
-   guide, §8.3, states that background-command output is not streamed back).
-2. `startCmd` / `readyCmd` on `GET /templates/{id}`.
-3. The PTY `exit` event's `reason` field (`"eof"`).
 
 ## Things the SDKs must get right
 
