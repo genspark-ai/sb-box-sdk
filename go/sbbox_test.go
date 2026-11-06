@@ -42,7 +42,7 @@ func TestAuthAndUserAgent(t *testing.T) {
 		t.Fatal(err)
 	}
 	r := m.last()
-	if r.Header.Get("X-Api-Key") != testKey || !strings.HasPrefix(r.Header.Get("User-Agent"), "sbbox-go-sdk/0.1.0") {
+	if r.Header.Get("X-Api-Key") != testKey || !strings.HasPrefix(r.Header.Get("User-Agent"), "sbbox-go-sdk/0.1.1") {
 		t.Fatalf("headers: %v", r.Header)
 	}
 	bad := m.client(t, WithAPIKey("gsk-wrong"))

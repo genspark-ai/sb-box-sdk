@@ -1,6 +1,6 @@
 {
   "name": "@genspark/sb-box",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Official TypeScript/JavaScript SDK for Genspark SB-Box sandboxes",
   "license": "MIT",
   "homepage": "https://www.genspark.ai/sb-box/docs",

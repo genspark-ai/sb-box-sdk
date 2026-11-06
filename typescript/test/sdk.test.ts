@@ -5,7 +5,7 @@ import {
   NotFoundError, PlanRequiredError, RegionRetiredError, SbBox, SbBoxConnectionError, SbBoxError, ServerError,
   TemplateBuildError, ValidationError, WaitTimeoutError, errorFromResponse, parseSse, redact,
 } from '../src/index.js'
-import { Http } from '../src/http.js'
+import { Http, SDK_VERSION } from '../src/http.js'
 import { KEY, startMock } from './mock-server.js'
 
 let mock: Awaited<ReturnType<typeof startMock>>
@@ -54,7 +54,7 @@ describe('client construction', () => {
   it('sends X-Api-Key and User-Agent', async () => {
     await sb.regions()
     expect(last().headers['x-api-key']).toBe(KEY)
-    expect(last().headers['user-agent']).toMatch(/^sbbox-typescript-sdk\/0\.1\.0/)
+    expect(last().headers['user-agent']).toMatch(new RegExp('^sbbox-typescript-sdk/' + SDK_VERSION.replace(/\./g, '\\.')))
   })
 
   it('rejects a bad key with AuthenticationError', async () => {

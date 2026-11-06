@@ -1,6 +1,6 @@
 import { errorFromResponse, redact, SbBoxConnectionError, SbBoxError } from './errors.js'
 
-export const SDK_VERSION = '0.1.0'
+export const SDK_VERSION = '0.1.2'
 export const DEFAULT_BASE_URL = 'https://www.genspark.ai/api/sb-box/v1'
 
 export interface HttpOptions {

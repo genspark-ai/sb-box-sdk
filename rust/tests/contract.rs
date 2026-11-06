@@ -158,7 +158,10 @@ async fn auth_header_user_agent_and_account_calls() {
 
     let req = &server.received_requests().await.unwrap()[0];
     let ua = req.headers.get("user-agent").unwrap().to_str().unwrap();
-    assert!(ua.starts_with("sbbox-rust-sdk/0.1.0"), "{ua}");
+    assert!(
+        ua.starts_with(concat!("sbbox-rust-sdk/", env!("CARGO_PKG_VERSION"))),
+        "{ua}"
+    );
     assert!(ua.ends_with("myapp/2.0"), "{ua}");
 }
 

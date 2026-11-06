@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.1.1 — 2026-11-06
+
+### Added
+- `ExecEvent.Seq`; `BackgroundCommand.Connect` follows the real server stream (`stdout` /
+  `stderr` with sequence numbers, `gap`, terminal `done`) and `ConnectFrom(ctx, fromSeq)`
+  re-attaches after a disconnect.
+- `(*DiskLostError).Recovery()` / `.Resumable()` expose the server's 410 `disk_lost` hints.
+
+### Fixed
+- `Freeze(ctx, id, true)` keeps polling while the record still reads `running` after a 202 and
+  returns a `*ConflictError` for `failed` / `exited` / `unknown` instead of succeeding silently.
+
+### Docs
+- 410 `disk_lost` guidance per endpoint; `Connect` after exit may yield `error` + `done` or 404.
+
 ## 0.1.0 — 2026-11-04
 
 Initial release.

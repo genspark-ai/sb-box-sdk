@@ -15,7 +15,7 @@ import (
 )
 
 // Version is the SDK version sent in the User-Agent.
-const Version = "0.1.0"
+const Version = "0.1.1"
 
 const defaultBaseURL = "https://www.genspark.ai/api/sb-box/v1"
 
