@@ -30,8 +30,9 @@ jobs:
           if curl -fsS -A "sb-box-sdk-ci" "https://crates.io/api/v1/crates/genspark-sbbox/$v" >/dev/null 2>&1; then
             echo "genspark-sbbox $v is already published; nothing to do"; echo "skip=true" >> "$GITHUB_OUTPUT"
           fi
+      # Token exchange runs even when the version is already published, so a
+      # re-run proves the crates.io trusted-publisher binding without publishing.
       - uses: rust-lang/crates-io-auth-action@v1
-        if: steps.check.outputs.skip != 'true'
         id: auth
       - run: cargo publish
         if: steps.check.outputs.skip != 'true'
