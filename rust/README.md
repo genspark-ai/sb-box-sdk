@@ -6,7 +6,7 @@ commands, files, a stateful code interpreter and terminals over one API key.
 
 ```toml
 [dependencies]
-genspark-sbbox = "0.1"
+genspark-sbbox = "0.2"
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 ```
 
