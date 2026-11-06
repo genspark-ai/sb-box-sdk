@@ -5,8 +5,6 @@ code in it, read and write files, freeze it when idle and resume it later with m
 
 ```bash
 pip install genspark-sbbox
-# until the first PyPI release:
-pip install "git+https://github.com/genspark-ai/sb-box-sdk.git#subdirectory=python"
 ```
 
 Python 3.9+. The only dependency is `httpx`. Sync (`sbbox.Client`) and async (`sbbox.AsyncClient`)

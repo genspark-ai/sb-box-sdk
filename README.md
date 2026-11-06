@@ -5,7 +5,7 @@ All four expose the same surface and are published independently:
 
 | Language | Package | Directory |
 |---|---|---|
-| Python 3.9+ | `pip install genspark-sbbox` (not on PyPI yet — until then `pip install "git+https://github.com/genspark-ai/sb-box-sdk.git#subdirectory=python"`) | [`python/`](python/) |
+| Python 3.9+ | `pip install genspark-sbbox` | [`python/`](python/) |
 | TypeScript / Node 18+ | `npm install @genspark/sb-box` | [`typescript/`](typescript/) |
 | Go 1.21+ | `go get github.com/genspark-ai/sb-box-sdk/go` | [`go/`](go/) |
 | Rust (tokio) | `cargo add genspark-sbbox` | [`rust/`](rust/) |
