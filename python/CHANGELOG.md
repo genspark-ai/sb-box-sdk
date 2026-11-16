@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Package classifier: `Development Status :: 5 - Production/Stable` (was Beta).
+
 ## 0.1.0 — 2026-11-06
 
 Published to PyPI on 2026-11-06 from the tree described below (the first tag was cut after the
